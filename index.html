@@ -1756,6 +1756,31 @@
                 case 'nick':
                     if (this.remotes[fromConnId]) this.remotes[fromConnId].nick = data.nick;
                     break;
+
+                case 'world':
+                    // host → clientes: snapshot de inimigos e eBullets
+                    this.applyWorldSnapshot(data);
+                    break;
+
+                case 'shoot':
+                    // cliente → host: informa que atirou (host resolve colisão)
+                    if (this.role === 'host') {
+                        _clientShoot(data);
+                    }
+                    break;
+
+                case 'wave':
+                    // host → clientes: avança onda
+                    if (this.role === 'client') {
+                        wave = data.w; waveTimer = 0; bossSpawned = false;
+                        waveDuration = Math.max(12, 22 - wave * .6);
+                        showWave('ONDA ' + wave);
+                        const isBoss = data.isBoss;
+                        notify((isBoss ? '⚠ ONDA CHEFE — ' : '') + 'Onda ' + wave + ' iniciada!', isBoss ? 'red' : 'green');
+                        timeOfDay = ((wave * .17) % 1);
+                        updateHUD();
+                    }
+                    break;
                 }
             },
 
@@ -1839,11 +1864,102 @@
                 this.myId = null; this.hostId = null;
                 this.roomCode = null; this.isPlaying = false;
                 this.deadSet = new Set(); this.totalPlayers = 0;
+            },
+
+            // ── Autoridade do host: envia snapshot de inimigos ──
+            // Chamado pelo host a cada frame; clientes apenas aplicam.
+            // Formato compacto: array de [id, x, y, z, hp, isBoss, hue, movePhase, strafeAmp, shootCD, lastShot]
+            broadcastEnemySnapshot() {
+                if (this.role !== 'host' || !this.isPlaying) return;
+                const snap = enemies.map(en => [
+                    en.userData.eid,
+                    +en.position.x.toFixed(2),
+                    +en.position.y.toFixed(2),
+                    +en.position.z.toFixed(2),
+                    en.userData.health,
+                    en.userData.isBoss ? 1 : 0,
+                    +en.userData.hue.toFixed(3),
+                    +en.userData.movePhase.toFixed(3),
+                    +en.userData.strafeAmp.toFixed(2),
+                    en.userData.shootCD,
+                ]);
+                // também envia eBullets do host para clientes
+                const ebs = eBullets.map(b => [
+                    b.bid,
+                    +b.mesh.position.x.toFixed(2),
+                    +b.mesh.position.y.toFixed(2),
+                    +b.mesh.position.z.toFixed(2),
+                    b.speed, b.dmg
+                ]);
+                this.broadcast({ type: 'world', enemies: snap, eBullets: ebs });
+            },
+
+            applyWorldSnapshot(data) {
+                if (this.role !== 'client' || !this.isPlaying) return;
+                const snap = data.enemies || [];
+
+                // ── inimigos: reconciliar pelo eid ──
+                const snapIds = new Set(snap.map(s => s[0]));
+
+                // remove inimigos que sumiram
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    if (!snapIds.has(enemies[i].userData.eid)) {
+                        // morreu no host — explode localmente
+                        const en = enemies[i];
+                        const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
+                        createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
+                        sfxExplode(en.userData.isBoss ? 2.5 : 1);
+                        scene.remove(en); enemies.splice(i, 1);
+                    }
+                }
+
+                // atualiza / cria inimigos presentes no snap
+                const existingMap = {};
+                enemies.forEach(en => existingMap[en.userData.eid] = en);
+
+                for (const s of snap) {
+                    const [eid, x, y, z, hp, boss, hue, movePhase, strafeAmp, shootCD] = s;
+                    if (existingMap[eid]) {
+                        const en = existingMap[eid];
+                        // interpola posição suavemente
+                        en.position.x = THREE.MathUtils.lerp(en.position.x, x, 0.3);
+                        en.position.y = THREE.MathUtils.lerp(en.position.y, y, 0.3);
+                        en.position.z = THREE.MathUtils.lerp(en.position.z, z, 0.3);
+                        en.userData.health = hp;
+                    } else {
+                        // novo inimigo — cria mesh
+                        _spawnEnemyFromSnap(eid, x, y, z, hp, boss, hue, movePhase, strafeAmp, shootCD);
+                    }
+                }
+
+                // ── eBullets do host ──
+                const ebs = data.eBullets || [];
+                const ebIds = new Set(ebs.map(b => b[0]));
+                for (let i = eBullets.length - 1; i >= 0; i--) {
+                    if (!ebIds.has(eBullets[i].bid)) {
+                        scene.remove(eBullets[i].mesh); eBullets.splice(i, 1);
+                    }
+                }
+                const existingEB = {};
+                eBullets.forEach(b => existingEB[b.bid] = b);
+                for (const eb of ebs) {
+                    const [bid, x, y, z, spd, dmg] = eb;
+                    if (existingEB[bid]) {
+                        existingEB[bid].mesh.position.set(x, y, z);
+                    } else {
+                        const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, 2.8),
+                            new THREE.MeshBasicMaterial({ color: 0xff4444 }));
+                        m.position.set(x, y, z); scene.add(m);
+                        eBullets.push({ bid, mesh: m, speed: spd, dmg });
+                    }
+                }
             }
         };
 
-        // Sync 20×/s
+        // Sync de estado de jogadores: 20×/s
         setInterval(() => { if (MP.isPlaying) MP.sendState(); }, 50);
+        // Sync de mundo (inimigos + eBullets): 20×/s, só host
+        setInterval(() => { if (MP.isPlaying && MP.role === 'host') MP.broadcastEnemySnapshot(); }, 50);
 
         // ══════════════════════════════════════════════════════════
         // HOST
@@ -2676,6 +2792,7 @@
         function startGame() {
             state = S.PLAYING;
             score = kills = shotsFired = shotsHit = 0;
+            _eidCounter = 0; _bidCounter = 0;
             hp = maxHp = 100 + (getShipStats().armor > 1 ? 20 : 0);
             wave = 1; waveTimer = 0; waveDuration = 22; bossSpawned = false;
             pwRapid = pwShield = pwSpread = pwInferno = 0;
@@ -2717,9 +2834,12 @@
             const isBoss = wave % 5 === 0;
             notify((isBoss ? '⚠ ONDA CHEFE — ' : '') + 'Onda ' + wave + ' iniciada!', isBoss ? 'red' : 'green');
             score += 60 * (wave - 1);
-            // time of day shift
             timeOfDay = ((wave * .17) % 1);
             updateHUD();
+            // Host sincroniza wave com clientes
+            if (MP.isPlaying && MP.role === 'host') {
+                MP.broadcast({ type: 'wave', w: wave, isBoss });
+            }
         }
         // ── CRASH SEQUENCE STATE ──
         const crashState = {
@@ -3026,10 +3146,12 @@
         }
 
         function enemyShoot(en) {
+            // No MP, só o host cria eBullets (sincronizados via snapshot)
+            if (MP.isPlaying && MP.role !== 'host') return;
             const isBoss = en.userData.isBoss;
             const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, 2.8), new THREE.MeshBasicMaterial({ color: isBoss ? 0xff0000 : 0xff4444 }));
             m.position.copy(en.position); m.position.z += 9; scene.add(m);
-            eBullets.push({ mesh: m, speed: isBoss ? 70 : 50, dmg: isBoss ? 12 : 7 }); sfxEShoot();
+            eBullets.push({ bid: ++_bidCounter, mesh: m, speed: isBoss ? 70 : 50, dmg: isBoss ? 12 : 7 }); sfxEShoot();
         }
 
         // ══════════════════════════════════════════════════════════
@@ -3040,7 +3162,13 @@
         const PU_EMOJI = { rapid: '⚡', shield: '🛡️', spread: '💥', repair: '❤️', inferno: '🔥' };
         const PU_LABEL = { rapid: 'Tiro Rápido!', shield: 'Escudo Ativo!', spread: 'Spread Shot!', repair: 'Casco Reparado!', inferno: 'Modo Inferno!' };
 
+        // ── ID único por inimigo (usado para sincronizar no MP) ──
+        let _eidCounter = 0;
+        let _bidCounter = 0;  // ID único por eBullet
+
         function spawnEnemy(isBoss = false) {
+            // No MP, só o host spawna
+            if (MP.isPlaying && MP.role !== 'host') return;
             const hue = Math.random();
             const ec = {
                 shape: 'classic', fins: 'standard', gondola: 'box', gun: 'single', emblem: 'none',
@@ -3053,11 +3181,68 @@
             const e = buildBlimp(ec, isBoss);
             e.position.set((Math.random() - .5) * BX * 1.8, (Math.random() - .5) * BY * 1.5, -360 - Math.random() * 120);
             e.rotation.y = Math.PI;
+            e.userData.eid = ++_eidCounter;
+            e.userData.hue = hue;
             e.userData.lastShot = 0;
             e.userData.shootCD = isBoss ? 900 : 2400 + Math.random() * 1600;
             e.userData.movePhase = Math.random() * Math.PI * 2;
             e.userData.strafeAmp = (Math.random() - .5) * 18;
             scene.add(e); enemies.push(e);
+        }
+
+        // Cria inimigo no cliente a partir do snapshot do host
+        function _spawnEnemyFromSnap(eid, x, y, z, hp, boss, hue, movePhase, strafeAmp, shootCD) {
+            const ec = {
+                shape: boss ? 'fat' : 'classic',
+                fins: boss ? 'wide' : 'standard',
+                gondola: 'box', gun: boss ? 'double' : 'single', emblem: 'none',
+                colors: {
+                    env: new THREE.Color().setHSL(hue, .9, .45).getStyle(), gon: '#222233', fin: '#111144',
+                    prop: '#888888', nose: '#550000', stripe: '#ff2200', gondola2: '#111122', trim: '#334466'
+                }
+            };
+            const e = buildBlimp(ec, boss);
+            e.position.set(x, y, z);
+            e.rotation.y = Math.PI;
+            e.userData.eid = eid;
+            e.userData.hue = hue;
+            e.userData.health = hp;
+            e.userData.lastShot = 0;
+            e.userData.shootCD = shootCD;
+            e.userData.movePhase = movePhase;
+            e.userData.strafeAmp = strafeAmp;
+            scene.add(e); enemies.push(e);
+        }
+
+        // Host recebe "shoot" de um cliente e resolve colisão
+        function _clientShoot(data) {
+            // data: { x, y, z, dx, isInferno }
+            // Cria bullet temporário para resolução
+            const bx = data.x, by = data.y, bz = data.z, bdx = data.dx || 0;
+            // Checa colisão com todos os inimigos
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                const en = enemies[j];
+                const dist = Math.sqrt(
+                    (bx - en.position.x) ** 2 +
+                    (by - en.position.y) ** 2 +
+                    (bz - en.position.z) ** 2
+                );
+                if (dist < en.userData.radius + 6) {
+                    // hit! (raio maior para compensar latência)
+                    en.userData.health--;
+                    if (en.userData.health <= 0) {
+                        const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
+                        createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
+                        sfxExplode(en.userData.isBoss ? 2.5 : 1);
+                        const pts = en.userData.isBoss ? 600 : 10 * wave;
+                        score += pts; kills++;
+                        notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + ('+' + pts + ' pts'), en.userData.isBoss ? 'gold' : 'green');
+                        if (Math.random() < (en.userData.isBoss ? 1 : .3)) spawnPowerup(en.position);
+                        scene.remove(en); enemies.splice(j, 1);
+                    }
+                    break;
+                }
+            }
         }
 
         function spawnCloud(init = false) {
@@ -3194,7 +3379,7 @@
             updateSkyColor(dt);
 
             const isBossWave = wave % 5 === 0;
-            if (isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
+            if ((!MP.isPlaying || MP.role === 'host') && isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
                 spawnEnemy(true); bossSpawned = true; notify('⚠ CHEFE APARECEU! Seja cuidadoso!', 'red');
             }
 
@@ -3207,7 +3392,8 @@
                 spawnPowerup(new THREE.Vector3((Math.random() - .5) * BX * 1.5, (Math.random() - .5) * BY * 1.2, pz));
             }
 
-            if (waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
+            // Só host avança onda (clientes recebem via broadcast 'wave')
+            if ((!MP.isPlaying || MP.role === 'host') && waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
 
             // Player movement
             const { speed } = getShipStats();
@@ -3285,29 +3471,50 @@
                 b.mesh.position.z -= b.speed * dt;
                 if (b.dx) b.mesh.position.x += b.dx * dt;
                 if (b.mesh.position.z < -480) { scene.remove(b.mesh); bullets.splice(i, 1); continue; }
+
                 let hit = false;
-                for (let j = enemies.length - 1; j >= 0; j--) {
-                    const en = enemies[j];
-                    if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 2) {
-                        hit = true; shotsHit++;
-                        scene.remove(b.mesh); bullets.splice(i, 1);
-                        en.userData.health--;
-                        // Inferno: area explosion
-                        if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
-                        if (en.userData.health <= 0) {
-                            const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
-                            createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
-                            sfxExplode(en.userData.isBoss ? 2.5 : 1);
-                            scene.remove(en); enemies.splice(j, 1);
-                            const pts = en.userData.isBoss ? 600 : 10 * wave;
-                            score += pts; kills++;
-                            notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + ('+' + pts + ' pts'), en.userData.isBoss ? 'gold' : 'green');
-                            if (Math.random() < (en.userData.isBoss ? 1 : .3)) spawnPowerup(en.position);
-                        } else {
-                            // hit flash
-                            en.children.forEach(c => { if (c.material && c.material.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
+
+                // Só o host (ou SP) resolve colisão com inimigos
+                if (!MP.isPlaying || MP.role === 'host') {
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const en = enemies[j];
+                        if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 2) {
+                            hit = true; shotsHit++;
+                            scene.remove(b.mesh); bullets.splice(i, 1);
+                            en.userData.health--;
+                            if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
+                            if (en.userData.health <= 0) {
+                                const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
+                                createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
+                                sfxExplode(en.userData.isBoss ? 2.5 : 1);
+                                scene.remove(en); enemies.splice(j, 1);
+                                const pts = en.userData.isBoss ? 600 : 10 * wave;
+                                score += pts; kills++;
+                                notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + ('+' + pts + ' pts'), en.userData.isBoss ? 'gold' : 'green');
+                                if (Math.random() < (en.userData.isBoss ? 1 : .3)) spawnPowerup(en.position);
+                            } else {
+                                en.children.forEach(c => { if (c.material && c.material.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
+                            }
+                            break;
                         }
-                        break;
+                    }
+                } else {
+                    // Cliente: checa colisão local para feedback visual imediato,
+                    // mas também envia ao host para autoridade
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        const en = enemies[j];
+                        if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 4) {
+                            hit = true; shotsHit++;
+                            scene.remove(b.mesh); bullets.splice(i, 1);
+                            if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
+                            // flash local
+                            en.children.forEach(c => { if (c.material && c.material.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
+                            // Notifica host
+                            MP.sendToHost({ type: 'shoot',
+                                x: b.mesh.position.x, y: b.mesh.position.y, z: b.mesh.position.z,
+                                dx: b.dx || 0, isInferno: b.isInferno });
+                            break;
+                        }
                     }
                 }
                 if (hit) continue;
@@ -3316,8 +3523,13 @@
 
         function updateEBullets(dt) {
             for (let i = eBullets.length - 1; i >= 0; i--) {
-                const b = eBullets[i]; b.mesh.position.z += b.speed * dt;
+                const b = eBullets[i];
+                // Cliente: posição já sincronizada pelo snapshot — só anima localmente para interpolação suave
+                if (!MP.isPlaying || MP.role === 'host') {
+                    b.mesh.position.z += b.speed * dt;
+                }
                 if (b.mesh.position.z > 90) { scene.remove(b.mesh); eBullets.splice(i, 1); continue; }
+                // Colisão com jogador local (todos resolvem para si)
                 if (player && b.mesh.position.distanceTo(player.position) < player.userData.radius + 1.5) {
                     scene.remove(b.mesh); eBullets.splice(i, 1);
                     if (pwShield > 0) { notify('Tiro bloqueado! 🛡️', 'blue'); createExplosion(b.mesh.position, 0x00ccff, 6); }
@@ -3327,43 +3539,70 @@
         }
 
         function updateEnemies(dt) {
+            // Clientes apenas animam props — posição vem do snapshot do host
+            if (MP.isPlaying && MP.role !== 'host') {
+                for (const en of enemies) {
+                    const p = en.getObjectByName('prop'); if (p) p.rotation.z += 16 * dt;
+                }
+                return;
+            }
+
             const gs = 1 + wave * .05;
-            // In MP, find the target player (local if alive, else skip)
-            const targetPlayer = player;
+
+            // Host coleta todos os alvos (jogador local + remotos)
+            const allTargets = [];
+            if (player) allTargets.push({ pos: player.position, rad: player.userData.radius, isLocal: true });
+            for (const pid in MP.remotes) {
+                const r = MP.remotes[pid];
+                if (r.mesh && !r.dead) allTargets.push({ pos: r.mesh.position, rad: r.mesh.userData?.radius || 3, isLocal: false, pid });
+            }
+
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const en = enemies[i];
                 const spd = en.userData.isBoss ? 20 : 32;
                 en.position.z += spd * gs * dt;
-                if (targetPlayer) {
-                    // Homing + strafing
-                    const dx = targetPlayer.position.x - en.position.x;
-                    const dy = targetPlayer.position.y - en.position.y;
+
+                // Homing: mira no alvo mais próximo
+                if (allTargets.length > 0) {
+                    let nearest = allTargets[0];
+                    let nearDist = en.position.distanceTo(nearest.pos);
+                    for (let t = 1; t < allTargets.length; t++) {
+                        const d = en.position.distanceTo(allTargets[t].pos);
+                        if (d < nearDist) { nearDist = d; nearest = allTargets[t]; }
+                    }
+                    const dx = nearest.pos.x - en.position.x;
+                    const dy = nearest.pos.y - en.position.y;
                     const homing = en.userData.isBoss ? .025 : .015;
                     en.position.x += dx * homing + Math.sin(Date.now() * .0015 + en.userData.movePhase) * en.userData.strafeAmp * .03;
                     en.position.y += dy * .01;
                 }
                 const p = en.getObjectByName('prop'); if (p) p.rotation.z += 16 * dt;
 
-                // Shooting
+                // Shooting (host autoridade)
                 const now = Date.now();
-                if (targetPlayer && now - en.userData.lastShot > en.userData.shootCD && en.position.z > -300) {
+                if (now - en.userData.lastShot > en.userData.shootCD && en.position.z > -300) {
                     en.userData.lastShot = now; enemyShoot(en);
-                    // Boss shoots 3 at once
                     if (en.userData.isBoss) {
                         setTimeout(() => { if (en.parent) enemyShoot(en); }, 200);
                         setTimeout(() => { if (en.parent) enemyShoot(en); }, 400);
                     }
                 }
 
-                // Collision with player
-                if (targetPlayer && en.position.distanceTo(targetPlayer.position) < en.userData.radius + targetPlayer.userData.radius) {
-                    const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
-                    createExplosion(en.position, col, 30); sfxExplode(1.5);
-                    scene.remove(en); enemies.splice(i, 1);
-                    if (pwShield > 0) notify('Colisão bloqueada! 🛡️', 'blue');
-                    else takeDamage(en.userData.isBoss ? 40 : 25);
-                    continue;
+                // Colisão com qualquer alvo
+                let collided = false;
+                for (const tgt of allTargets) {
+                    if (en.position.distanceTo(tgt.pos) < en.userData.radius + (tgt.rad || 3)) {
+                        const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
+                        createExplosion(en.position, col, 30); sfxExplode(1.5);
+                        scene.remove(en); enemies.splice(i, 1);
+                        if (tgt.isLocal) {
+                            if (pwShield > 0) notify('Colisão bloqueada! 🛡️', 'blue');
+                            else takeDamage(en.userData.isBoss ? 40 : 25);
+                        }
+                        collided = true; break;
+                    }
                 }
+                if (collided) continue;
                 if (en.position.z > 80) { scene.remove(en); enemies.splice(i, 1); }
             }
         }
