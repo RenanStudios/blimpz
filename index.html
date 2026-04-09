@@ -1095,7 +1095,7 @@
             border: 1px solid rgba(100,160,255,.3);
             border-radius: 8px;
             padding: 7px 10px;
-            color: #c8d8ff;
+            color: #20285e;
             font-size: 13px;
             font-family: var(--ui-font);
             font-weight: 700;
@@ -1196,7 +1196,7 @@
             border: 1px solid rgba(100,160,255,.3);
             border-radius: 8px;
             padding: 9px 12px;
-            color: #253f70;
+            color: #7090cc;
             font-size: 14px;
             font-family: var(--ui-font);
             font-weight: 700;
@@ -1304,7 +1304,11 @@
             flex-direction: column;
             gap: 18px;
         }
-        #mp-waiting-overlay.show { display: flex; }
+
+            #mp-waiting-overlay.show {
+                display: flex;
+            }
+
         .mp-wait-title {
             font-family: 'Black Han Sans', sans-serif;
             font-size: 38px;
@@ -1312,17 +1316,26 @@
             color: var(--red);
             filter: drop-shadow(0 0 18px rgba(255,60,70,.6));
         }
+
         .mp-wait-sub {
             font-size: 15px;
             color: rgba(180,200,255,.7);
             letter-spacing: 1px;
         }
+
         .mp-wait-dots {
             font-size: 28px;
             animation: dotPulse 1.4s infinite;
         }
+
         @keyframes dotPulse {
-            0%,100%{opacity:.3} 50%{opacity:1}
+            0%,100% {
+                opacity: .3
+            }
+
+            50% {
+                opacity: 1
+            }
         }
         /* ───── NICK CANVAS OVERLAY ───── */
         #nick-canvas {
@@ -1336,6 +1349,7 @@
         #mp-gowindow {
             display: none;
         }
+
         .btn-mp-leave {
             background: linear-gradient(135deg,#8b0000,#4a0000) !important;
             box-shadow: 0 4px 20px rgba(180,0,0,.4) !important;
@@ -1343,7 +1357,11 @@
             border-radius: 12px !important;
             margin-top: 8px;
         }
-        .btn-mp-leave:hover { transform: translateY(-2px); }
+
+            .btn-mp-leave:hover {
+                transform: translateY(-2px);
+            }
+
         .btn-mp-back {
             background: linear-gradient(135deg,#225fcc,#113388) !important;
             box-shadow: 0 4px 20px rgba(30,80,200,.4) !important;
@@ -1351,7 +1369,10 @@
             border-radius: 12px !important;
             margin-top: 8px;
         }
-        .btn-mp-back:hover { transform: translateY(-2px); }
+
+            .btn-mp-back:hover {
+                transform: translateY(-2px);
+            }
 
         .btn-mp {
             width: 100%;
@@ -1671,307 +1692,154 @@
         });
 
         // ══════════════════════════════════════════════════════════
-        // MULTIPLAYER — PeerJS WebRTC  (reescrito)
+        // MULTIPLAYER — PeerJS WebRTC
         // ══════════════════════════════════════════════════════════
-        //
-        // Arquitetura estrela: host conectado diretamente com cada client.
-        // Clients NÃO se conectam entre si — host retransmite tudo.
-        // Cada msg de posição inclui "pid" (peerID real do dono).
-        //
-        //  MP.conns   { peerID → DataConnection }
-        //  MP.remotes { peerID → { nick, mesh, dead } }
-        //  MP.myId    — peerID local
-        //  MP.hostId  — peerID do host
-        //  MP.deadSet — Set de quem morreu ('_me' = local)
-
         const MP = {
-            peer: null,
-            role: null,         // 'host' | 'client'
-            myId: null,
-            hostId: null,
-            conns: {},
-            remotes: {},
+            peer: null,           // our PeerJS peer
+            role: null,           // 'host' or 'client'
+            conns: {},            // peerID → DataConnection (host keeps all; client keeps 1)
+            players: {},          // peerID → { nick, mesh, x, y, rotZ, hp }
             roomCode: null,
             isPlaying: false,
-            deadSet: new Set(),
-            totalPlayers: 0,
+            localDead: false,     // local player died, waiting for others
+            remoteDead: {},       // peerID → true when that remote player is dead
 
-            _send(conn, data) { try { conn.send(data); } catch(e) {} },
+            // Send to all (host only)
             broadcast(data, excludeId) {
-                for (const id in this.conns)
-                    if (id !== excludeId) this._send(this.conns[id], data);
+                for (const id in this.conns) {
+                    if (id !== excludeId) try { this.conns[id].send(data); } catch (e) { }
+                }
             },
+            // Send to host (client only)
             sendToHost(data) {
-                if (this.hostId && this.conns[this.hostId])
-                    this._send(this.conns[this.hostId], data);
+                const ids = Object.keys(this.conns);
+                if (ids.length) try { this.conns[ids[0]].send(data); } catch (e) { }
             },
-
+            // Send to everyone including self-relay when host
             sendState() {
                 if (!this.isPlaying || !player) return;
-                const msg = { type: 'state', pid: this.myId,
-                    x: player.position.x, y: player.position.y, rotZ: player.rotation.z, hp };
+                const msg = { type: 'state', x: player.position.x, y: player.position.y, rotZ: player.rotation.z, hp };
                 if (this.role === 'host') this.broadcast(msg);
                 else this.sendToHost(msg);
             },
-
-            onMsg(fromConnId, data) {
-                switch (data.type) {
-                case 'state': {
-                    const pid = data.pid || fromConnId;
-                    if (pid === this.myId) break;
-                    this._ensureRemote(pid, null);
-                    const r = this.remotes[pid];
-                    if (r && r.mesh && !r.dead) {
-                        r.mesh.position.x = THREE.MathUtils.lerp(r.mesh.position.x, data.x, 0.35);
-                        r.mesh.position.y = THREE.MathUtils.lerp(r.mesh.position.y, data.y, 0.35);
-                        r.mesh.rotation.z = THREE.MathUtils.lerp(r.mesh.rotation.z, data.rotZ, 0.25);
-                        r.hp = data.hp;
-                    }
-                    if (this.role === 'host') this.broadcast(data, fromConnId);
-                    break;
-                }
-                case 'dead': {
-                    const pid = data.pid || fromConnId;
-                    if (pid !== this.myId) this._handleRemoteDead(pid);
-                    if (this.role === 'host') this.broadcast(data, fromConnId);
-                    break;
-                }
-                case 'join_info':
-                    this._updateJoinPlayerList(data.players);
-                    break;
-                case 'start':
-                    this.totalPlayers = data.total || 2;
-                    if (data.nickMap) {
-                        for (const pid in data.nickMap) {
-                            if (pid === this.myId) continue;
-                            if (!this.remotes[pid]) this.remotes[pid] = { nick: data.nickMap[pid], mesh: null, dead: false };
-                            else this.remotes[pid].nick = data.nickMap[pid];
-                        }
-                    }
-                    closeMP();
-                    this.isPlaying = true;
-                    startGame();
-                    notify('🌐 Partida multiplayer iniciada!', 'blue');
-                    break;
-                case 'nick':
-                    if (this.remotes[fromConnId]) this.remotes[fromConnId].nick = data.nick;
-                    break;
-
-                case 'world':
-                    // host → clientes: snapshot de inimigos e eBullets
-                    this.applyWorldSnapshot(data);
-                    break;
-
-                case 'shoot':
-                    // cliente → host: informa que atirou (host resolve colisão)
-                    if (this.role === 'host') {
-                        _clientShoot(data);
-                    }
-                    break;
-
-                case 'wave':
-                    // host → clientes: avança onda
-                    if (this.role === 'client') {
-                        wave = data.w; waveTimer = 0; bossSpawned = false;
-                        waveDuration = Math.max(12, 22 - wave * .6);
-                        showWave('ONDA ' + wave);
-                        const isBoss = data.isBoss;
-                        notify((isBoss ? '⚠ ONDA CHEFE — ' : '') + 'Onda ' + wave + ' iniciada!', isBoss ? 'red' : 'green');
-                        timeOfDay = ((wave * .17) % 1);
-                        updateHUD();
-                    }
-                    break;
-                }
+            // Notify others we died
+            sendDead() {
+                const msg = { type: 'dead' };
+                if (this.role === 'host') this.broadcast(msg);
+                else this.sendToHost(msg);
             },
-
-            _ensureRemote(pid, nick) {
-                if (!this.isPlaying) return;
-                if (pid === this.myId) return;
-                if (!this.remotes[pid]) this.remotes[pid] = { nick: nick || pid, mesh: null, dead: false };
-                const r = this.remotes[pid];
-                if (!r.mesh && !r.dead) {
-                    const idx = Object.keys(this.remotes).indexOf(pid);
-                    const hue = (idx * 0.37 + 0.58) % 1;
-                    const col = new THREE.Color().setHSL(hue, 0.8, 0.45);
-                    const cfg = {
-                        shape: 'classic', fins: 'standard', gondola: 'box', gun: 'single', emblem: 'none',
-                        colors: {
-                            env: '#' + col.getHexString(), gon: '#1a2a55', fin: '#0d1f66',
-                            prop: '#aaaacc', nose: '#1a3377', stripe: '#88aaff', gondola2: '#0d1a44', trim: '#aaddff'
-                        }
-                    };
-                    const mesh = buildBlimp(cfg);
-                    mesh.position.set(8 + idx * 5, 0, 0);
-                    scene.add(mesh);
-                    r.mesh = mesh;
-                    if (nick) r.nick = nick;
-                }
-            },
-
-            spawnAllRemotes() {
-                for (const pid in this.remotes) this._ensureRemote(pid, this.remotes[pid].nick);
-            },
-
-            _handleRemoteDead(pid) {
-                if (this.deadSet.has(pid)) return;
-                this.deadSet.add(pid);
-                const r = this.remotes[pid];
-                if (r) {
-                    r.dead = true;
-                    if (r.mesh) {
-                        createExplosion(r.mesh.position, 0xff6600, 22);
+            // Handle incoming message
+            onMsg(fromId, data) {
+                if (data.type === 'state') {
+                    // Update remote player mesh
+                    if (!this.players[fromId]) this._addRemotePlayer(fromId, this.players[fromId]?.nick || fromId);
+                    const p = this.players[fromId];
+                    if (p && p.mesh) {
+                        p.mesh.position.x = THREE.MathUtils.lerp(p.mesh.position.x, data.x, 0.35);
+                        p.mesh.position.y = THREE.MathUtils.lerp(p.mesh.position.y, data.y, 0.35);
+                        p.mesh.rotation.z = THREE.MathUtils.lerp(p.mesh.rotation.z, data.rotZ, 0.25);
+                        p.hp = data.hp;
+                    }
+                    // Host relays to other clients
+                    if (this.role === 'host') this.broadcast(data, fromId);
+                } else if (data.type === 'dead') {
+                    // A remote player died
+                    this.remoteDead[fromId] = true;
+                    if (this.players[fromId]?.mesh) {
+                        createExplosion(this.players[fromId].mesh.position, 0xff6600, 18);
                         sfxExplode(1.0);
-                        scene.remove(r.mesh);
-                        r.mesh = null;
+                        scene.remove(this.players[fromId].mesh);
+                        this.players[fromId].mesh = null;
                     }
+                    // Host relays dead message
+                    if (this.role === 'host') this.broadcast(data, fromId);
+                    // Check if all are dead now
+                    this._checkAllDead();
+                } else if (data.type === 'bullet') {
+                    // Remote player fired — spawn bullet locally
+                    const m = new THREE.Mesh(bulletGeo, bulletMats[data.mat] || bulletMats.normal);
+                    m.position.set(data.x, data.y, data.z);
+                    scene.add(m);
+                    bullets.push({ mesh: m, speed: data.speed || 110, dx: data.dx || 0, isInferno: data.isInferno || false, isRemote: true });
+                    // Host relays to other clients
+                    if (this.role === 'host') this.broadcast(data, fromId);
+                } else if (data.type === 'powerup_spawn') {
+                    // Authoritative powerup spawn from host
+                    if (this.role !== 'host') {
+                        spawnPowerup(new THREE.Vector3(data.x, data.y, data.z), data.ptype);
+                    }
+                } else if (data.type === 'powerup_collect') {
+                    // Remote player collected a powerup — remove locally by approximate position
+                    for (let i = powerups.length - 1; i >= 0; i--) {
+                        const p = powerups[i];
+                        if (Math.abs(p.position.x - data.x) < 3 && Math.abs(p.position.z - data.z) < 3) {
+                            createExplosion(p.position, PU_COLORS[p.userData.type] || 0xffffff, 12);
+                            scene.remove(p); powerups.splice(i, 1); break;
+                        }
+                    }
+                    if (this.role === 'host') this.broadcast(data, fromId);
+                } else if (data.type === 'join_info') {
+                    // Client receives host's player list
+                    this._updateJoinPlayerList(data.players);
+                } else if (data.type === 'start') {
+                    // Host says game starts
+                    closeMP();
+                    startGame();
+                    this.isPlaying = true;
+                    notify('🌐 Partida multiplayer iniciada!', 'blue');
+                } else if (data.type === 'nick') {
+                    if (this.players[fromId]) this.players[fromId].nick = data.nick;
                 }
-                this._checkAllDead();
             },
-
             _checkAllDead() {
-                if (!this.deadSet.has('_me')) return;
-                const rids = Object.keys(this.remotes);
-                if (rids.length === 0) return;
-                if (rids.every(pid => this.deadSet.has(pid))) {
+                if (!this.localDead) return;
+                // All remote players also dead?
+                const allRemoteDead = Object.keys(this.players).every(id => this.remoteDead[id]);
+                if (allRemoteDead) {
+                    // Everyone dead: show MP game over
                     document.getElementById('mp-waiting-overlay').classList.remove('show');
                     showMPGameOver();
                 }
             },
-
-            localDie() {
-                if (this.deadSet.has('_me')) return;
-                this.deadSet.add('_me');
-                const msg = { type: 'dead', pid: this.myId };
-                if (this.role === 'host') this.broadcast(msg);
-                else this.sendToHost(msg);
+            _addRemotePlayer(id, nick) {
+                if (this.players[id]?.mesh) return;
+                const remoteCfg = {
+                    shape: 'classic', fins: 'standard', gondola: 'box', gun: 'single', emblem: 'none',
+                    colors: { env: '#3366ff', gon: '#223355', fin: '#1133aa', prop: '#aaaacc', nose: '#224488', stripe: '#88aaff', gondola2: '#112244', trim: '#aaddff' }
+                };
+                const mesh = buildBlimp(remoteCfg);
+                mesh.position.set(8, 0, 0);
+                scene.add(mesh);
+                if (!this.players[id]) this.players[id] = {};
+                this.players[id].mesh = mesh;
+                this.players[id].nick = nick || id;
             },
-
-            _removeRemote(pid) {
-                const r = this.remotes[pid];
-                if (r && r.mesh) scene.remove(r.mesh);
-                delete this.remotes[pid];
+            _removeRemotePlayer(id) {
+                if (this.players[id]?.mesh) { scene.remove(this.players[id].mesh); }
+                delete this.players[id];
             },
-
             _updateJoinPlayerList(list) {
                 const el = document.getElementById('mp-join-player-list');
                 if (el) el.innerHTML = list.map(n => `<div class="mp-player-item">🎈 ${n}</div>`).join('') || '—';
             },
-
             reset() {
-                for (const pid in this.remotes) this._removeRemote(pid);
-                if (this.peer) { try { this.peer.destroy(); } catch(e) {} this.peer = null; }
-                this.conns = {}; this.remotes = {}; this.role = null;
-                this.myId = null; this.hostId = null;
-                this.roomCode = null; this.isPlaying = false;
-                this.deadSet = new Set(); this.totalPlayers = 0;
-            },
-
-            // ── Autoridade do host: envia snapshot de inimigos ──
-            // Chamado pelo host a cada frame; clientes apenas aplicam.
-            // Formato compacto: array de [id, x, y, z, hp, isBoss, hue, movePhase, strafeAmp, shootCD, lastShot]
-            broadcastEnemySnapshot() {
-                if (this.role !== 'host' || !this.isPlaying) return;
-                const snap = enemies.map(en => [
-                    en.userData.eid,
-                    +en.position.x.toFixed(2),
-                    +en.position.y.toFixed(2),
-                    +en.position.z.toFixed(2),
-                    en.userData.health,
-                    en.userData.isBoss ? 1 : 0,
-                    +en.userData.hue.toFixed(3),
-                    +en.userData.movePhase.toFixed(3),
-                    +en.userData.strafeAmp.toFixed(2),
-                    en.userData.shootCD,
-                ]);
-                // também envia eBullets do host para clientes
-                const ebs = eBullets.map(b => [
-                    b.bid,
-                    +b.mesh.position.x.toFixed(2),
-                    +b.mesh.position.y.toFixed(2),
-                    +b.mesh.position.z.toFixed(2),
-                    b.speed, b.dmg
-                ]);
-                this.broadcast({ type: 'world', enemies: snap, eBullets: ebs });
-            },
-
-            applyWorldSnapshot(data) {
-                if (this.role !== 'client' || !this.isPlaying) return;
-                const snap = data.enemies || [];
-
-                // ── inimigos: reconciliar pelo eid ──
-                const snapIds = new Set(snap.map(s => s[0]));
-
-                // remove inimigos que sumiram
-                for (let i = enemies.length - 1; i >= 0; i--) {
-                    if (!snapIds.has(enemies[i].userData.eid)) {
-                        // morreu no host — explode localmente
-                        const en = enemies[i];
-                        const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
-                        createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
-                        sfxExplode(en.userData.isBoss ? 2.5 : 1);
-                        scene.remove(en); enemies.splice(i, 1);
-                    }
-                }
-
-                // atualiza / cria inimigos presentes no snap
-                const existingMap = {};
-                enemies.forEach(en => existingMap[en.userData.eid] = en);
-
-                for (const s of snap) {
-                    const [eid, x, y, z, hp, boss, hue, movePhase, strafeAmp, shootCD] = s;
-                    if (existingMap[eid]) {
-                        const en = existingMap[eid];
-                        // interpola posição suavemente
-                        en.position.x = THREE.MathUtils.lerp(en.position.x, x, 0.3);
-                        en.position.y = THREE.MathUtils.lerp(en.position.y, y, 0.3);
-                        en.position.z = THREE.MathUtils.lerp(en.position.z, z, 0.3);
-                        en.userData.health = hp;
-                    } else {
-                        // novo inimigo — cria mesh
-                        _spawnEnemyFromSnap(eid, x, y, z, hp, boss, hue, movePhase, strafeAmp, shootCD);
-                    }
-                }
-
-                // ── eBullets do host ──
-                const ebs = data.eBullets || [];
-                const ebIds = new Set(ebs.map(b => b[0]));
-                for (let i = eBullets.length - 1; i >= 0; i--) {
-                    if (!ebIds.has(eBullets[i].bid)) {
-                        scene.remove(eBullets[i].mesh); eBullets.splice(i, 1);
-                    }
-                }
-                const existingEB = {};
-                eBullets.forEach(b => existingEB[b.bid] = b);
-                for (const eb of ebs) {
-                    const [bid, x, y, z, spd, dmg] = eb;
-                    if (existingEB[bid]) {
-                        existingEB[bid].mesh.position.set(x, y, z);
-                    } else {
-                        const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, 2.8),
-                            new THREE.MeshBasicMaterial({ color: 0xff4444 }));
-                        m.position.set(x, y, z); scene.add(m);
-                        eBullets.push({ bid, mesh: m, speed: spd, dmg });
-                    }
-                }
+                for (const id in this.players) this._removeRemotePlayer(id);
+                if (this.peer) { try { this.peer.destroy(); } catch (e) { } this.peer = null; }
+                this.conns = {}; this.players = {}; this.role = null; this.roomCode = null; this.isPlaying = false;
+                this.localDead = false; this.remoteDead = {};
             }
         };
 
-        // Sync de estado de jogadores: 20×/s
-        setInterval(() => { if (MP.isPlaying) MP.sendState(); }, 50);
-        // Sync de mundo (inimigos + eBullets): 20×/s, só host
-        setInterval(() => { if (MP.isPlaying && MP.role === 'host') MP.broadcastEnemySnapshot(); }, 50);
+        // ── Sync loop: send state 20 times/sec ──
+        setInterval(() => { if (MP.isPlaying && (MP.role === 'host' || Object.keys(MP.conns).length)) MP.sendState(); }, 50);
 
-        // ══════════════════════════════════════════════════════════
-        // HOST
-        // ══════════════════════════════════════════════════════════
+        // ── HOST ──
         function genRoomCode() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let code = 'BZ-';
             for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
             return code;
         }
-
-        let _hostNickMap = {};
 
         function mpHost(serverName) {
             const status = document.getElementById('mp-host-status');
@@ -1981,49 +1849,41 @@
             const shortCode = genRoomCode();
             MP.peer = new Peer(shortCode);
             MP.peer.on('open', id => {
-                MP.myId = id;
-                MP.hostId = id;
                 MP.roomCode = id;
-                _hostNickMap = {};
-                _hostNickMap[id] = playerNick;
                 document.getElementById('mp-room-code').textContent = id;
                 document.getElementById('mp-host-setup').style.display = 'none';
                 document.getElementById('mp-host-waiting').style.display = 'block';
                 document.getElementById('mp-host-self').textContent = '👑 ' + playerNick + ' (você, host)';
                 status.textContent = 'Sala criada! Aguardando jogadores...';
                 status.className = 'mp-status ok';
-                _updateHostPlayerList();
+                MP.players['_host'] = { nick: playerNick };
             });
             MP.peer.on('connection', conn => {
                 MP.conns[conn.peer] = conn;
-                _hostNickMap[conn.peer] = conn.peer;
-                conn.on('open', () => {
-                    const list = Object.values(_hostNickMap);
-                    conn.send({ type: 'join_info', players: list });
-                });
+                let connNick = conn.peer;
                 conn.on('data', data => {
                     if (data.type === 'nick') {
-                        _hostNickMap[conn.peer] = data.nick;
-                        if (!MP.remotes[conn.peer]) MP.remotes[conn.peer] = { nick: data.nick, mesh: null, dead: false };
-                        else MP.remotes[conn.peer].nick = data.nick;
+                        connNick = data.nick;
+                        MP.players[conn.peer] = { nick: connNick };
                         _updateHostPlayerList();
-                        MP.broadcast({ type: 'join_info', players: Object.values(_hostNickMap) });
+                        // Send updated list to all
+                        const list = Object.values(MP.players).map(p => p.nick);
+                        MP.broadcast({ type: 'join_info', players: list });
                     } else {
                         MP.onMsg(conn.peer, data);
                     }
                 });
                 conn.on('close', () => {
                     delete MP.conns[conn.peer];
-                    delete _hostNickMap[conn.peer];
-                    if (MP.isPlaying) {
-                        if (!MP.deadSet.has(conn.peer)) MP._handleRemoteDead(conn.peer);
-                    } else {
-                        MP._removeRemote(conn.peer);
-                    }
+                    MP._removeRemotePlayer(conn.peer);
+                    delete MP.players[conn.peer];
                     _updateHostPlayerList();
                 });
-                conn.on('error', () => {});
-                _updateHostPlayerList();
+                conn.on('open', () => {
+                    // Send current players
+                    const list = Object.values(MP.players).map(p => p.nick);
+                    conn.send({ type: 'join_info', players: list });
+                });
             });
             MP.peer.on('error', err => {
                 status.textContent = 'Erro: ' + err.type; status.className = 'mp-status err';
@@ -2033,16 +1893,14 @@
         function _updateHostPlayerList() {
             const el = document.getElementById('mp-player-list');
             const items = ['<div class="mp-player-item">👑 ' + playerNick + ' (você)</div>'];
-            for (const pid in _hostNickMap) {
-                if (pid === MP.myId) continue;
-                items.push('<div class="mp-player-item">🎈 ' + _hostNickMap[pid] + '</div>');
+            for (const id in MP.players) {
+                if (id === '_host') continue;
+                items.push('<div class="mp-player-item">🎈 ' + MP.players[id].nick + '</div>');
             }
             el.innerHTML = items.join('');
         }
 
-        // ══════════════════════════════════════════════════════════
-        // CLIENT
-        // ══════════════════════════════════════════════════════════
+        // ── JOIN ──
         function mpJoin(code) {
             const status = document.getElementById('mp-join-status');
             status.textContent = 'Conectando...'; status.className = 'mp-status';
@@ -2050,43 +1908,38 @@
             MP.role = 'client';
             MP.peer = new Peer();
             MP.peer.on('open', myId => {
-                MP.myId = myId;
-                const hostCode = code.toUpperCase();
-                MP.hostId = hostCode;
-                const conn = MP.peer.connect(hostCode, { reliable: true });
-                MP.conns[hostCode] = conn;
+                const conn = MP.peer.connect(code.toUpperCase(), { reliable: false });
+                MP.conns[code] = conn;
                 conn.on('open', () => {
                     conn.send({ type: 'nick', nick: playerNick });
                     status.textContent = 'Conectado! Aguardando host...'; status.className = 'mp-status ok';
                     document.getElementById('mp-join-setup').style.display = 'none';
                     document.getElementById('mp-join-lobby').style.display = 'block';
                 });
-                conn.on('data', data => MP.onMsg(hostCode, data));
+                conn.on('data', data => MP.onMsg(code, data));
                 conn.on('close', () => {
-                    if (!MP.isPlaying) {
-                        status.textContent = 'Desconectado.'; status.className = 'mp-status err';
-                    } else {
-                        notify('⚠ Conexão com host perdida', 'red');
-                    }
+                    status.textContent = 'Desconectado.'; status.className = 'mp-status err';
                 });
-                conn.on('error', () => {});
+                conn.on('error', err => {
+                    status.textContent = 'Erro de conexão.'; status.className = 'mp-status err';
+                });
             });
-            MP.peer.on('error', () => {
+            MP.peer.on('error', err => {
                 status.textContent = 'Não foi possível conectar.'; status.className = 'mp-status err';
             });
         }
 
-        // ══════════════════════════════════════════════════════════
-        // MP UI EVENTS
-        // ══════════════════════════════════════════════════════════
+        // ── MP UI ──
         function openMP() { document.getElementById('mp-modal').classList.add('open'); }
         function closeMP() { document.getElementById('mp-modal').classList.remove('open'); }
 
         document.getElementById('btn-mp').addEventListener('click', openMP);
         document.getElementById('mp-close').addEventListener('click', () => {
             closeMP();
+            // Reset if not in a game
             if (!MP.isPlaying) MP.reset();
         });
+
         document.getElementById('mp-tab-host').addEventListener('click', () => {
             document.getElementById('mp-tab-host').classList.add('active');
             document.getElementById('mp-tab-join').classList.remove('active');
@@ -2099,33 +1952,29 @@
             document.getElementById('mp-join-section').classList.add('open');
             document.getElementById('mp-host-section').classList.remove('open');
         });
+
         document.getElementById('mp-host-btn').addEventListener('click', () => {
-            mpHost(document.getElementById('mp-server-name').value.trim() || 'Servidor');
+            const name = document.getElementById('mp-server-name').value.trim() || 'Servidor';
+            mpHost(name);
         });
+
         document.getElementById('mp-join-btn').addEventListener('click', () => {
             const code = document.getElementById('mp-join-code').value.trim();
-            if (code) mpJoin(code);
+            if (!code) return;
+            mpJoin(code);
         });
+
         document.getElementById('mp-room-code').addEventListener('click', () => {
             const code = document.getElementById('mp-room-code').textContent;
-            navigator.clipboard.writeText(code).then(() => notify('📋 Código copiado!', 'blue')).catch(() => {});
+            navigator.clipboard.writeText(code).then(() => notify('📋 Código copiado!', 'blue')).catch(() => { });
         });
+
         document.getElementById('mp-start-btn').addEventListener('click', () => {
-            if (Object.keys(MP.conns).length === 0) {
-                notify('⚠ Nenhum jogador conectado!', 'red'); return;
-            }
-            const nickMap = Object.assign({}, _hostNickMap);
-            nickMap[MP.myId] = playerNick;
-            const total = Object.keys(nickMap).length;
-            MP.totalPlayers = total;
-            for (const pid in nickMap) {
-                if (pid === MP.myId) continue;
-                if (!MP.remotes[pid]) MP.remotes[pid] = { nick: nickMap[pid], mesh: null, dead: false };
-            }
-            MP.broadcast({ type: 'start', total, nickMap });
+            // Host starts game and notifies all clients
+            MP.broadcast({ type: 'start' });
             closeMP();
-            MP.isPlaying = true;
             startGame();
+            MP.isPlaying = true;
             notify('🌐 Partida multiplayer iniciada!', 'blue');
         });
 
@@ -2728,8 +2577,8 @@
             }
 
             // Remote players
-            for (const id in MP.remotes) {
-                const rp = MP.remotes[id];
+            for (const id in MP.players) {
+                const rp = MP.players[id];
                 if (!rp.mesh) continue;
                 const screenPos = worldToScreen(rp.mesh.position.clone().add(new THREE.Vector3(0, 4, 0)));
                 if (!screenPos.behind) drawNickLabel(rp.nick || id, screenPos.x, screenPos.y, '#88aaff');
@@ -2792,7 +2641,6 @@
         function startGame() {
             state = S.PLAYING;
             score = kills = shotsFired = shotsHit = 0;
-            _eidCounter = 0; _bidCounter = 0;
             hp = maxHp = 100 + (getShipStats().armor > 1 ? 20 : 0);
             wave = 1; waveTimer = 0; waveDuration = 22; bossSpawned = false;
             pwRapid = pwShield = pwSpread = pwInferno = 0;
@@ -2812,8 +2660,6 @@
             }
             scene.remove(previewShip); clearEntities();
             player = buildBlimp(ship); player.position.set(0, 0, 0); scene.add(player);
-            // Spawn remote player meshes if multiplayer
-            if (MP.isPlaying) MP.spawnAllRemotes();
             camera.position.set(0, 6, 28); camera.lookAt(0, 0, -100);
             showWave('ONDA 1'); notify('Boa sorte, piloto! ✈', 'blue');
             updateHUD();
@@ -2823,7 +2669,8 @@
             document.getElementById('mp-gowindow').style.display = 'none';
             document.getElementById('mp-waiting-overlay').classList.remove('show');
             if (MP.isPlaying) {
-                MP.deadSet = new Set();
+                MP.localDead = false;
+                MP.remoteDead = {};
             }
             player = null; // ensure clean state
             startGame();
@@ -2834,12 +2681,9 @@
             const isBoss = wave % 5 === 0;
             notify((isBoss ? '⚠ ONDA CHEFE — ' : '') + 'Onda ' + wave + ' iniciada!', isBoss ? 'red' : 'green');
             score += 60 * (wave - 1);
+            // time of day shift
             timeOfDay = ((wave * .17) % 1);
             updateHUD();
-            // Host sincroniza wave com clientes
-            if (MP.isPlaying && MP.role === 'host') {
-                MP.broadcast({ type: 'wave', w: wave, isBoss });
-            }
         }
         // ── CRASH SEQUENCE STATE ──
         const crashState = {
@@ -2912,7 +2756,9 @@
 
             // Multiplayer: notify others we died
             if (MP.isPlaying) {
-                MP.localDie();
+                MP.localDead = true;
+                MP.remoteDead = {};
+                MP.sendDead();
             }
 
             state = S.CRASHING;
@@ -3025,12 +2871,13 @@
 
             // ── 4. Show game over menu after full duration ──
             if (t >= dur) {
-                state = S.GAMEOVER;
                 if (MP.isPlaying) {
-                    // MP: show waiting overlay, check if all already dead
+                    // MP: show waiting overlay and re-enter PLAYING state so enemies/game continue
+                    state = S.PLAYING;
                     document.getElementById('mp-waiting-overlay').classList.add('show');
                     MP._checkAllDead();
                 } else {
+                    state = S.GAMEOVER;
                     // Singleplayer game over
                     document.getElementById('go-score').textContent = score;
                     document.getElementById('go-kills').textContent = kills;
@@ -3076,11 +2923,11 @@
             state = S.MENU;
             // Keep MP connection alive, reopen MP modal
             MP.isPlaying = false;
-            MP.deadSet = new Set();
-            // Reset remote meshes for potential rematch
-            for (const id in MP.remotes) {
-                if (MP.remotes[id].mesh) { scene.remove(MP.remotes[id].mesh); MP.remotes[id].mesh = null; }
-                if (MP.remotes[id]) MP.remotes[id].dead = false;
+            MP.localDead = false;
+            MP.remoteDead = {};
+            // Reset player meshes for potential rematch
+            for (const id in MP.players) {
+                if (MP.players[id].mesh) { scene.remove(MP.players[id].mesh); MP.players[id].mesh = null; }
             }
             openMP();
         });
@@ -3106,10 +2953,9 @@
             bullets = []; eBullets = []; enemies = []; clouds = []; particles = []; powerups = [];
             // Clear nick canvas
             if (nickCtx) nickCtx.clearRect(0, 0, nickCanvas.width, nickCanvas.height);
-            // Remove remote player meshes but keep connections; reset dead for restart
-            for (const id in MP.remotes) {
-                if (MP.remotes[id].mesh) { scene.remove(MP.remotes[id].mesh); MP.remotes[id].mesh = null; }
-                MP.remotes[id].dead = false;
+            // Remove remote player meshes but keep connections
+            for (const id in MP.players) {
+                if (MP.players[id].mesh) { scene.remove(MP.players[id].mesh); MP.players[id].mesh = null; }
             }
             // keep scenery, just reset positions for scrollable non-ground items
             scenery.forEach(s => {
@@ -3141,17 +2987,24 @@
             angles.forEach(ang => {
                 const m = new THREE.Mesh(bulletGeo, bMat);
                 m.position.copy(player.position); m.position.z -= 8; m.position.y -= 1;
-                scene.add(m); bullets.push({ mesh: m, speed: 110, dx: Math.sin(ang) * 42, isInferno: pwInferno > 0 });
+                scene.add(m);
+                const bObj = { mesh: m, speed: 110, dx: Math.sin(ang) * 42, isInferno: pwInferno > 0 };
+                bullets.push(bObj);
+                // Sync bullet to other players in MP
+                if (MP.isPlaying) {
+                    const matKey = pwInferno > 0 ? 'inferno' : pwRapid > 0 ? 'rapid' : 'normal';
+                    const msg = { type: 'bullet', x: m.position.x, y: m.position.y, z: m.position.z, speed: 110, dx: bObj.dx, isInferno: bObj.isInferno, mat: matKey };
+                    if (MP.role === 'host') MP.broadcast(msg);
+                    else MP.sendToHost(msg);
+                }
             });
         }
 
         function enemyShoot(en) {
-            // No MP, só o host cria eBullets (sincronizados via snapshot)
-            if (MP.isPlaying && MP.role !== 'host') return;
             const isBoss = en.userData.isBoss;
             const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, 2.8), new THREE.MeshBasicMaterial({ color: isBoss ? 0xff0000 : 0xff4444 }));
             m.position.copy(en.position); m.position.z += 9; scene.add(m);
-            eBullets.push({ bid: ++_bidCounter, mesh: m, speed: isBoss ? 70 : 50, dmg: isBoss ? 12 : 7 }); sfxEShoot();
+            eBullets.push({ mesh: m, speed: isBoss ? 70 : 50, dmg: isBoss ? 12 : 7 }); sfxEShoot();
         }
 
         // ══════════════════════════════════════════════════════════
@@ -3162,13 +3015,7 @@
         const PU_EMOJI = { rapid: '⚡', shield: '🛡️', spread: '💥', repair: '❤️', inferno: '🔥' };
         const PU_LABEL = { rapid: 'Tiro Rápido!', shield: 'Escudo Ativo!', spread: 'Spread Shot!', repair: 'Casco Reparado!', inferno: 'Modo Inferno!' };
 
-        // ── ID único por inimigo (usado para sincronizar no MP) ──
-        let _eidCounter = 0;
-        let _bidCounter = 0;  // ID único por eBullet
-
         function spawnEnemy(isBoss = false) {
-            // No MP, só o host spawna
-            if (MP.isPlaying && MP.role !== 'host') return;
             const hue = Math.random();
             const ec = {
                 shape: 'classic', fins: 'standard', gondola: 'box', gun: 'single', emblem: 'none',
@@ -3181,68 +3028,11 @@
             const e = buildBlimp(ec, isBoss);
             e.position.set((Math.random() - .5) * BX * 1.8, (Math.random() - .5) * BY * 1.5, -360 - Math.random() * 120);
             e.rotation.y = Math.PI;
-            e.userData.eid = ++_eidCounter;
-            e.userData.hue = hue;
             e.userData.lastShot = 0;
             e.userData.shootCD = isBoss ? 900 : 2400 + Math.random() * 1600;
             e.userData.movePhase = Math.random() * Math.PI * 2;
             e.userData.strafeAmp = (Math.random() - .5) * 18;
             scene.add(e); enemies.push(e);
-        }
-
-        // Cria inimigo no cliente a partir do snapshot do host
-        function _spawnEnemyFromSnap(eid, x, y, z, hp, boss, hue, movePhase, strafeAmp, shootCD) {
-            const ec = {
-                shape: boss ? 'fat' : 'classic',
-                fins: boss ? 'wide' : 'standard',
-                gondola: 'box', gun: boss ? 'double' : 'single', emblem: 'none',
-                colors: {
-                    env: new THREE.Color().setHSL(hue, .9, .45).getStyle(), gon: '#222233', fin: '#111144',
-                    prop: '#888888', nose: '#550000', stripe: '#ff2200', gondola2: '#111122', trim: '#334466'
-                }
-            };
-            const e = buildBlimp(ec, boss);
-            e.position.set(x, y, z);
-            e.rotation.y = Math.PI;
-            e.userData.eid = eid;
-            e.userData.hue = hue;
-            e.userData.health = hp;
-            e.userData.lastShot = 0;
-            e.userData.shootCD = shootCD;
-            e.userData.movePhase = movePhase;
-            e.userData.strafeAmp = strafeAmp;
-            scene.add(e); enemies.push(e);
-        }
-
-        // Host recebe "shoot" de um cliente e resolve colisão
-        function _clientShoot(data) {
-            // data: { x, y, z, dx, isInferno }
-            // Cria bullet temporário para resolução
-            const bx = data.x, by = data.y, bz = data.z, bdx = data.dx || 0;
-            // Checa colisão com todos os inimigos
-            for (let j = enemies.length - 1; j >= 0; j--) {
-                const en = enemies[j];
-                const dist = Math.sqrt(
-                    (bx - en.position.x) ** 2 +
-                    (by - en.position.y) ** 2 +
-                    (bz - en.position.z) ** 2
-                );
-                if (dist < en.userData.radius + 6) {
-                    // hit! (raio maior para compensar latência)
-                    en.userData.health--;
-                    if (en.userData.health <= 0) {
-                        const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
-                        createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
-                        sfxExplode(en.userData.isBoss ? 2.5 : 1);
-                        const pts = en.userData.isBoss ? 600 : 10 * wave;
-                        score += pts; kills++;
-                        notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + ('+' + pts + ' pts'), en.userData.isBoss ? 'gold' : 'green');
-                        if (Math.random() < (en.userData.isBoss ? 1 : .3)) spawnPowerup(en.position);
-                        scene.remove(en); enemies.splice(j, 1);
-                    }
-                    break;
-                }
-            }
         }
 
         function spawnCloud(init = false) {
@@ -3266,11 +3056,15 @@
             scene.add(g); clouds.push(g);
         }
 
-        function spawnPowerup(pos) {
-            const type = PU_TYPES[Math.floor(Math.random() * PU_TYPES.length)];
+        function spawnPowerup(pos, forcedType) {
+            const type = forcedType || PU_TYPES[Math.floor(Math.random() * PU_TYPES.length)];
             const m = new THREE.Mesh(G.oct, new THREE.MeshLambertMaterial({ color: PU_COLORS[type], flatShading: true }));
             m.scale.setScalar(1.7); m.position.copy(pos);
             m.userData.type = type; scene.add(m); powerups.push(m);
+            // Host broadcasts powerup spawn to clients for sync
+            if (MP.isPlaying && MP.role === 'host') {
+                MP.broadcast({ type: 'powerup_spawn', ptype: type, x: pos.x, y: pos.y, z: pos.z });
+            }
         }
 
         function createExplosion(pos, col, count = 20) {
@@ -3379,7 +3173,7 @@
             updateSkyColor(dt);
 
             const isBossWave = wave % 5 === 0;
-            if ((!MP.isPlaying || MP.role === 'host') && isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
+            if (isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
                 spawnEnemy(true); bossSpawned = true; notify('⚠ CHEFE APARECEU! Seja cuidadoso!', 'red');
             }
 
@@ -3388,14 +3182,17 @@
             if (!isBossWave && Math.random() < spawnRate) spawnEnemy();
             if (Math.random() < .055) spawnCloud();
             if (Math.random() < (.003 + wave * .001) && powerups.length < 5) {
-                const pz = player.position.z - 90 - Math.random() * 70;
-                spawnPowerup(new THREE.Vector3((Math.random() - .5) * BX * 1.5, (Math.random() - .5) * BY * 1.2, pz));
+                // Only host (or SP) spawns powerups — clients receive via powerup_spawn message
+                if (!MP.isPlaying || MP.role === 'host') {
+                    const pzRef = player ? player.position.z : 0;
+                    spawnPowerup(new THREE.Vector3((Math.random() - .5) * BX * 1.5, (Math.random() - .5) * BY * 1.2, pzRef - 90 - Math.random() * 70));
+                }
             }
 
-            // Só host avança onda (clientes recebem via broadcast 'wave')
-            if ((!MP.isPlaying || MP.role === 'host') && waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
+            if (waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
 
-            // Player movement
+            // Player movement (only if alive)
+            if (player) {
             const { speed } = getShipStats();
             const boostMult = iBoost() ? 1.55 : 1;
             const spd = speed * boostMult * dt;
@@ -3411,19 +3208,23 @@
             // Wind drift
             player.position.x += Math.sin(windOffset * .8) * .018;
             const prop = player.getObjectByName('prop'); if (prop) prop.rotation.z += 20 * boostMult * dt;
+            } // end if(player)
 
             // Camera follow — in MP show both players; in SP follow only local
             if (MP.isPlaying) {
-                // Find bounding box of all players
-                let minX = player.position.x, maxX = player.position.x;
-                let minY = player.position.y, maxY = player.position.y;
-                for (const id in MP.remotes) {
-                    const rp = MP.remotes[id];
+                // Find bounding box of all alive players
+                let minX = 0, maxX = 0, minY = 0, maxY = 0, hasAny = false;
+                if (player) { minX = maxX = player.position.x; minY = maxY = player.position.y; hasAny = true; }
+                for (const id in MP.players) {
+                    const rp = MP.players[id];
                     if (rp.mesh) {
+                        if (!hasAny) { minX = maxX = rp.mesh.position.x; minY = maxY = rp.mesh.position.y; hasAny = true; }
+                        else {
                         minX = Math.min(minX, rp.mesh.position.x);
                         maxX = Math.max(maxX, rp.mesh.position.x);
                         minY = Math.min(minY, rp.mesh.position.y);
                         maxY = Math.max(maxY, rp.mesh.position.y);
+                        }
                     }
                 }
                 const cx = (minX + maxX) * .5;
@@ -3435,11 +3236,12 @@
                 camera.position.y = THREE.MathUtils.lerp(camera.position.y, cy * .32 + 6, .07);
                 camera.position.z = THREE.MathUtils.lerp(camera.position.z, pullback, .07);
                 camera.lookAt(cx * .18, cy * .18, -80);
-            } else {
+            } else if (player) {
                 camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x * .38, .08);
                 camera.position.y = THREE.MathUtils.lerp(camera.position.y, player.position.y * .38 + 6, .08);
                 camera.lookAt(player.position.x * .2, player.position.y * .2, -80);
             }
+            // (no camera update if player is null and not MP — shouldn't happen)
 
             updateBullets(dt);
             updateEBullets(dt);
@@ -3451,8 +3253,8 @@
             updateHUD();
             updateNickLabels();
             // Animate remote player props
-            for (const id in MP.remotes) {
-                const rp = MP.remotes[id];
+            for (const id in MP.players) {
+                const rp = MP.players[id];
                 if (rp.mesh) {
                     const prop = rp.mesh.getObjectByName('prop');
                     if (prop) prop.rotation.z += 12 * dt;
@@ -3471,50 +3273,32 @@
                 b.mesh.position.z -= b.speed * dt;
                 if (b.dx) b.mesh.position.x += b.dx * dt;
                 if (b.mesh.position.z < -480) { scene.remove(b.mesh); bullets.splice(i, 1); continue; }
-
                 let hit = false;
-
-                // Só o host (ou SP) resolve colisão com inimigos
-                if (!MP.isPlaying || MP.role === 'host') {
-                    for (let j = enemies.length - 1; j >= 0; j--) {
-                        const en = enemies[j];
-                        if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 2) {
-                            hit = true; shotsHit++;
-                            scene.remove(b.mesh); bullets.splice(i, 1);
-                            en.userData.health--;
-                            if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
-                            if (en.userData.health <= 0) {
-                                const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
-                                createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
-                                sfxExplode(en.userData.isBoss ? 2.5 : 1);
-                                scene.remove(en); enemies.splice(j, 1);
-                                const pts = en.userData.isBoss ? 600 : 10 * wave;
-                                score += pts; kills++;
-                                notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + ('+' + pts + ' pts'), en.userData.isBoss ? 'gold' : 'green');
-                                if (Math.random() < (en.userData.isBoss ? 1 : .3)) spawnPowerup(en.position);
-                            } else {
-                                en.children.forEach(c => { if (c.material && c.material.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const en = enemies[j];
+                    if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 2) {
+                        hit = true; shotsHit++;
+                        scene.remove(b.mesh); bullets.splice(i, 1);
+                        en.userData.health--;
+                        // Inferno: area explosion
+                        if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
+                        if (en.userData.health <= 0) {
+                            const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
+                            createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
+                            sfxExplode(en.userData.isBoss ? 2.5 : 1);
+                            scene.remove(en); enemies.splice(j, 1);
+                            const pts = en.userData.isBoss ? 600 : 10 * wave;
+                            score += pts; kills++;
+                            notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + ('+' + pts + ' pts'), en.userData.isBoss ? 'gold' : 'green');
+                            if (Math.random() < (en.userData.isBoss ? 1 : .3)) {
+                                // Only host (or SP) spawns powerups — clients wait for powerup_spawn message
+                                if (!MP.isPlaying || MP.role === 'host') spawnPowerup(en.position);
                             }
-                            break;
-                        }
-                    }
-                } else {
-                    // Cliente: checa colisão local para feedback visual imediato,
-                    // mas também envia ao host para autoridade
-                    for (let j = enemies.length - 1; j >= 0; j--) {
-                        const en = enemies[j];
-                        if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 4) {
-                            hit = true; shotsHit++;
-                            scene.remove(b.mesh); bullets.splice(i, 1);
-                            if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
-                            // flash local
+                        } else {
+                            // hit flash
                             en.children.forEach(c => { if (c.material && c.material.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
-                            // Notifica host
-                            MP.sendToHost({ type: 'shoot',
-                                x: b.mesh.position.x, y: b.mesh.position.y, z: b.mesh.position.z,
-                                dx: b.dx || 0, isInferno: b.isInferno });
-                            break;
                         }
+                        break;
                     }
                 }
                 if (hit) continue;
@@ -3523,13 +3307,8 @@
 
         function updateEBullets(dt) {
             for (let i = eBullets.length - 1; i >= 0; i--) {
-                const b = eBullets[i];
-                // Cliente: posição já sincronizada pelo snapshot — só anima localmente para interpolação suave
-                if (!MP.isPlaying || MP.role === 'host') {
-                    b.mesh.position.z += b.speed * dt;
-                }
+                const b = eBullets[i]; b.mesh.position.z += b.speed * dt;
                 if (b.mesh.position.z > 90) { scene.remove(b.mesh); eBullets.splice(i, 1); continue; }
-                // Colisão com jogador local (todos resolvem para si)
                 if (player && b.mesh.position.distanceTo(player.position) < player.userData.radius + 1.5) {
                     scene.remove(b.mesh); eBullets.splice(i, 1);
                     if (pwShield > 0) { notify('Tiro bloqueado! 🛡️', 'blue'); createExplosion(b.mesh.position, 0x00ccff, 6); }
@@ -3539,70 +3318,43 @@
         }
 
         function updateEnemies(dt) {
-            // Clientes apenas animam props — posição vem do snapshot do host
-            if (MP.isPlaying && MP.role !== 'host') {
-                for (const en of enemies) {
-                    const p = en.getObjectByName('prop'); if (p) p.rotation.z += 16 * dt;
-                }
-                return;
-            }
-
             const gs = 1 + wave * .05;
-
-            // Host coleta todos os alvos (jogador local + remotos)
-            const allTargets = [];
-            if (player) allTargets.push({ pos: player.position, rad: player.userData.radius, isLocal: true });
-            for (const pid in MP.remotes) {
-                const r = MP.remotes[pid];
-                if (r.mesh && !r.dead) allTargets.push({ pos: r.mesh.position, rad: r.mesh.userData?.radius || 3, isLocal: false, pid });
-            }
-
+            // In MP, find the target player (local if alive, else skip)
+            const targetPlayer = player;
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const en = enemies[i];
                 const spd = en.userData.isBoss ? 20 : 32;
                 en.position.z += spd * gs * dt;
-
-                // Homing: mira no alvo mais próximo
-                if (allTargets.length > 0) {
-                    let nearest = allTargets[0];
-                    let nearDist = en.position.distanceTo(nearest.pos);
-                    for (let t = 1; t < allTargets.length; t++) {
-                        const d = en.position.distanceTo(allTargets[t].pos);
-                        if (d < nearDist) { nearDist = d; nearest = allTargets[t]; }
-                    }
-                    const dx = nearest.pos.x - en.position.x;
-                    const dy = nearest.pos.y - en.position.y;
+                if (targetPlayer) {
+                    // Homing + strafing
+                    const dx = targetPlayer.position.x - en.position.x;
+                    const dy = targetPlayer.position.y - en.position.y;
                     const homing = en.userData.isBoss ? .025 : .015;
                     en.position.x += dx * homing + Math.sin(Date.now() * .0015 + en.userData.movePhase) * en.userData.strafeAmp * .03;
                     en.position.y += dy * .01;
                 }
                 const p = en.getObjectByName('prop'); if (p) p.rotation.z += 16 * dt;
 
-                // Shooting (host autoridade)
+                // Shooting
                 const now = Date.now();
-                if (now - en.userData.lastShot > en.userData.shootCD && en.position.z > -300) {
+                if (targetPlayer && now - en.userData.lastShot > en.userData.shootCD && en.position.z > -300) {
                     en.userData.lastShot = now; enemyShoot(en);
+                    // Boss shoots 3 at once
                     if (en.userData.isBoss) {
                         setTimeout(() => { if (en.parent) enemyShoot(en); }, 200);
                         setTimeout(() => { if (en.parent) enemyShoot(en); }, 400);
                     }
                 }
 
-                // Colisão com qualquer alvo
-                let collided = false;
-                for (const tgt of allTargets) {
-                    if (en.position.distanceTo(tgt.pos) < en.userData.radius + (tgt.rad || 3)) {
-                        const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
-                        createExplosion(en.position, col, 30); sfxExplode(1.5);
-                        scene.remove(en); enemies.splice(i, 1);
-                        if (tgt.isLocal) {
-                            if (pwShield > 0) notify('Colisão bloqueada! 🛡️', 'blue');
-                            else takeDamage(en.userData.isBoss ? 40 : 25);
-                        }
-                        collided = true; break;
-                    }
+                // Collision with player
+                if (targetPlayer && en.position.distanceTo(targetPlayer.position) < en.userData.radius + targetPlayer.userData.radius) {
+                    const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
+                    createExplosion(en.position, col, 30); sfxExplode(1.5);
+                    scene.remove(en); enemies.splice(i, 1);
+                    if (pwShield > 0) notify('Colisão bloqueada! 🛡️', 'blue');
+                    else takeDamage(en.userData.isBoss ? 40 : 25);
+                    continue;
                 }
-                if (collided) continue;
                 if (en.position.z > 80) { scene.remove(en); enemies.splice(i, 1); }
             }
         }
@@ -3635,6 +3387,12 @@
                     sfxPowerup();
                     if (t !== 'repair') notify(PU_EMOJI[t] + ' ' + PU_LABEL[t], 'blue');
                     createExplosion(p.position, PU_COLORS[t], 12);
+                    // Notify others to remove this powerup
+                    if (MP.isPlaying) {
+                        const msg = { type: 'powerup_collect', x: p.position.x, y: p.position.y, z: p.position.z };
+                        if (MP.role === 'host') MP.broadcast(msg);
+                        else MP.sendToHost(msg);
+                    }
                     scene.remove(p); powerups.splice(i, 1); continue;
                 }
                 if (p.position.z > 90) { scene.remove(p); powerups.splice(i, 1); }
