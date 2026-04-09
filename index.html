@@ -1196,7 +1196,7 @@
             border: 1px solid rgba(100,160,255,.3);
             border-radius: 8px;
             padding: 9px 12px;
-            color: #c8d8ff;
+            color: #7090cc;
             font-size: 14px;
             font-family: var(--ui-font);
             font-weight: 700;
@@ -1292,6 +1292,88 @@
                 background: rgba(120,30,30,.6);
             }
 
+        /* ───── MP WAITING OVERLAY ───── */
+        #mp-waiting-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5,10,25,.82);
+            z-index: 60;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+            #mp-waiting-overlay.show {
+                display: flex;
+            }
+
+        .mp-wait-title {
+            font-family: 'Black Han Sans', sans-serif;
+            font-size: 38px;
+            letter-spacing: 3px;
+            color: var(--red);
+            filter: drop-shadow(0 0 18px rgba(255,60,70,.6));
+        }
+
+        .mp-wait-sub {
+            font-size: 15px;
+            color: rgba(180,200,255,.7);
+            letter-spacing: 1px;
+        }
+
+        .mp-wait-dots {
+            font-size: 28px;
+            animation: dotPulse 1.4s infinite;
+        }
+
+        @keyframes dotPulse {
+            0%,100% {
+                opacity: .3
+            }
+
+            50% {
+                opacity: 1
+            }
+        }
+        /* ───── NICK CANVAS OVERLAY ───── */
+        #nick-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 15;
+            display: none;
+        }
+        /* ───── MP GAME OVER ───── */
+        #mp-gowindow {
+            display: none;
+        }
+
+        .btn-mp-leave {
+            background: linear-gradient(135deg,#8b0000,#4a0000) !important;
+            box-shadow: 0 4px 20px rgba(180,0,0,.4) !important;
+            border: none !important;
+            border-radius: 12px !important;
+            margin-top: 8px;
+        }
+
+            .btn-mp-leave:hover {
+                transform: translateY(-2px);
+            }
+
+        .btn-mp-back {
+            background: linear-gradient(135deg,#225fcc,#113388) !important;
+            box-shadow: 0 4px 20px rgba(30,80,200,.4) !important;
+            border: none !important;
+            border-radius: 12px !important;
+            margin-top: 8px;
+        }
+
+            .btn-mp-back:hover {
+                transform: translateY(-2px);
+            }
+
         .btn-mp {
             width: 100%;
             padding: 13px;
@@ -1318,8 +1400,39 @@
 </head>
 <body>
     <canvas id="gc"></canvas>
+    <canvas id="nick-canvas"></canvas>
     <div id="dmgflash"></div>
     <div id="xhair"><div class="dot"></div></div>
+
+    <!-- MP WAITING OVERLAY (shown when local player dies, waiting for opponent) -->
+    <div id="mp-waiting-overlay">
+        <div class="mp-wait-title">💀 DESTRUÍDO</div>
+        <div class="mp-wait-sub">Aguardando o outro piloto...</div>
+        <div class="mp-wait-dots">✈ ✈ ✈</div>
+    </div>
+
+    <!-- MP GAME OVER (centered, multiplayer version) -->
+    <div id="gowindow-wrapper-mp" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:10;">
+        <div class="win7-window" id="mp-gowindow" style="display:none;pointer-events:auto;">
+            <div class="win7-titlebar">
+                <span class="win7-icon">💀</span>
+                <span class="win7-title-text">BLIMPZ — Fim de Partida</span>
+                <div class="win7-btns"><div class="win7-btn close-btn">✕</div></div>
+            </div>
+            <div class="panel" style="border-radius:0 0 4px 4px;border-top:none;text-align:center;width:370px;padding:24px 28px 28px;">
+                <div class="gotitle">FIM DE PARTIDA</div>
+                <div class="gosub" id="mp-go-sub">A batalha terminou.</div>
+                <div class="gostats">
+                    <div class="si"><div class="sv" id="mp-go-score">0</div><div class="sl">Pontos</div></div>
+                    <div class="si"><div class="sv" id="mp-go-kills">0</div><div class="sl">Abatidos</div></div>
+                    <div class="si"><div class="sv" id="mp-go-wave">1</div><div class="sl">Onda</div></div>
+                    <div class="si"><div class="sv" id="mp-go-acc">0%</div><div class="sl">Precisão</div></div>
+                </div>
+                <button class="btn-go btn-mp-back" id="mp-btn-back-server">🌐 VOLTAR AO SERVIDOR</button>
+                <button class="btn-go btn-mp-leave" id="mp-btn-leave">✕ SAIR DO SERVIDOR</button>
+            </div>
+        </div>
+    </div>
 
     <div id="ui">
         <!-- MENU — Win7 window on the left -->
@@ -1588,6 +1701,8 @@
             players: {},          // peerID → { nick, mesh, x, y, rotZ, hp }
             roomCode: null,
             isPlaying: false,
+            localDead: false,     // local player died, waiting for others
+            remoteDead: {},       // peerID → true when that remote player is dead
 
             // Send to all (host only)
             broadcast(data, excludeId) {
@@ -1607,6 +1722,12 @@
                 if (this.role === 'host') this.broadcast(msg);
                 else this.sendToHost(msg);
             },
+            // Notify others we died
+            sendDead() {
+                const msg = { type: 'dead' };
+                if (this.role === 'host') this.broadcast(msg);
+                else this.sendToHost(msg);
+            },
             // Handle incoming message
             onMsg(fromId, data) {
                 if (data.type === 'state') {
@@ -1621,6 +1742,19 @@
                     }
                     // Host relays to other clients
                     if (this.role === 'host') this.broadcast(data, fromId);
+                } else if (data.type === 'dead') {
+                    // A remote player died
+                    this.remoteDead[fromId] = true;
+                    if (this.players[fromId]?.mesh) {
+                        createExplosion(this.players[fromId].mesh.position, 0xff6600, 18);
+                        sfxExplode(1.0);
+                        scene.remove(this.players[fromId].mesh);
+                        this.players[fromId].mesh = null;
+                    }
+                    // Host relays dead message
+                    if (this.role === 'host') this.broadcast(data, fromId);
+                    // Check if all are dead now
+                    this._checkAllDead();
                 } else if (data.type === 'join_info') {
                     // Client receives host's player list
                     this._updateJoinPlayerList(data.players);
@@ -1632,6 +1766,16 @@
                     notify('🌐 Partida multiplayer iniciada!', 'blue');
                 } else if (data.type === 'nick') {
                     if (this.players[fromId]) this.players[fromId].nick = data.nick;
+                }
+            },
+            _checkAllDead() {
+                if (!this.localDead) return;
+                // All remote players also dead?
+                const allRemoteDead = Object.keys(this.players).every(id => this.remoteDead[id]);
+                if (allRemoteDead) {
+                    // Everyone dead: show MP game over
+                    document.getElementById('mp-waiting-overlay').classList.remove('show');
+                    showMPGameOver();
                 }
             },
             _addRemotePlayer(id, nick) {
@@ -1659,6 +1803,7 @@
                 for (const id in this.players) this._removeRemotePlayer(id);
                 if (this.peer) { try { this.peer.destroy(); } catch (e) { } this.peer = null; }
                 this.conns = {}; this.players = {}; this.role = null; this.roomCode = null; this.isPlaying = false;
+                this.localDead = false; this.remoteDead = {};
             }
         };
 
@@ -2376,6 +2521,97 @@
             else { ic.classList.remove('active'); ti.style.display = 'none'; }
         }
 
+        // ── Nick labels above blimps ──
+        let nickCanvas, nickCtx;
+        function initNickCanvas() {
+            nickCanvas = document.getElementById('nick-canvas');
+            nickCanvas.width = innerWidth;
+            nickCanvas.height = innerHeight;
+            nickCtx = nickCanvas.getContext('2d');
+            window.addEventListener('resize', () => {
+                nickCanvas.width = innerWidth;
+                nickCanvas.height = innerHeight;
+            });
+        }
+
+        function worldToScreen(pos3d) {
+            const v = pos3d.clone().project(camera);
+            return {
+                x: (v.x * .5 + .5) * innerWidth,
+                y: (-v.y * .5 + .5) * innerHeight,
+                behind: v.z > 1
+            };
+        }
+
+        function updateNickLabels() {
+            if (!MP.isPlaying || !nickCtx) return;
+            nickCtx.clearRect(0, 0, nickCanvas.width, nickCanvas.height);
+
+            // Local player nick
+            if (player) {
+                const screenPos = worldToScreen(player.position.clone().add(new THREE.Vector3(0, 4, 0)));
+                if (!screenPos.behind) drawNickLabel(playerNick, screenPos.x, screenPos.y, '#44FF88');
+            }
+
+            // Remote players
+            for (const id in MP.players) {
+                const rp = MP.players[id];
+                if (!rp.mesh) continue;
+                const screenPos = worldToScreen(rp.mesh.position.clone().add(new THREE.Vector3(0, 4, 0)));
+                if (!screenPos.behind) drawNickLabel(rp.nick || id, screenPos.x, screenPos.y, '#88aaff');
+            }
+        }
+
+        function drawNickLabel(nick, x, y, color) {
+            if (!nickCtx) return;
+            nickCtx.font = 'bold 13px Nunito, sans-serif';
+            nickCtx.textAlign = 'center';
+            nickCtx.textBaseline = 'middle';
+            const w = nickCtx.measureText(nick).width + 18;
+            const h = 22;
+            const rx = x - w / 2, ry = y - h / 2, r = 5;
+            // Background pill
+            nickCtx.fillStyle = 'rgba(8,14,38,0.85)';
+            nickCtx.beginPath();
+            if (nickCtx.roundRect) {
+                nickCtx.roundRect(rx, ry, w, h, r);
+            } else {
+                nickCtx.moveTo(rx + r, ry);
+                nickCtx.lineTo(rx + w - r, ry);
+                nickCtx.quadraticCurveTo(rx + w, ry, rx + w, ry + r);
+                nickCtx.lineTo(rx + w, ry + h - r);
+                nickCtx.quadraticCurveTo(rx + w, ry + h, rx + w - r, ry + h);
+                nickCtx.lineTo(rx + r, ry + h);
+                nickCtx.quadraticCurveTo(rx, ry + h, rx, ry + h - r);
+                nickCtx.lineTo(rx, ry + r);
+                nickCtx.quadraticCurveTo(rx, ry, rx + r, ry);
+                nickCtx.closePath();
+            }
+            nickCtx.fill();
+            // Border
+            nickCtx.strokeStyle = color;
+            nickCtx.lineWidth = 1.5;
+            nickCtx.beginPath();
+            if (nickCtx.roundRect) {
+                nickCtx.roundRect(rx, ry, w, h, r);
+            } else {
+                nickCtx.moveTo(rx + r, ry);
+                nickCtx.lineTo(rx + w - r, ry);
+                nickCtx.quadraticCurveTo(rx + w, ry, rx + w, ry + r);
+                nickCtx.lineTo(rx + w, ry + h - r);
+                nickCtx.quadraticCurveTo(rx + w, ry + h, rx + w - r, ry + h);
+                nickCtx.lineTo(rx + r, ry + h);
+                nickCtx.quadraticCurveTo(rx, ry + h, rx, ry + h - r);
+                nickCtx.lineTo(rx, ry + r);
+                nickCtx.quadraticCurveTo(rx, ry, rx + r, ry);
+                nickCtx.closePath();
+            }
+            nickCtx.stroke();
+            // Text
+            nickCtx.fillStyle = color;
+            nickCtx.fillText(nick, x, y);
+        }
+
         // ══════════════════════════════════════════════════════════
         // GAME FLOW
         // ══════════════════════════════════════════════════════════
@@ -2389,6 +2625,16 @@
             document.getElementById('hud').style.display = 'block';
             document.getElementById('xhair').style.display = 'block';
             document.getElementById('pubar').style.display = 'flex';
+            document.getElementById('mp-waiting-overlay').classList.remove('show');
+            document.getElementById('mp-gowindow').style.display = 'none';
+            document.getElementById('gowindow').style.display = 'none';
+            // Nick canvas: only show in multiplayer
+            if (MP.isPlaying) {
+                document.getElementById('nick-canvas').style.display = 'block';
+                if (!nickCtx) initNickCanvas();
+            } else {
+                document.getElementById('nick-canvas').style.display = 'none';
+            }
             scene.remove(previewShip); clearEntities();
             player = buildBlimp(ship); player.position.set(0, 0, 0); scene.add(player);
             camera.position.set(0, 6, 28); camera.lookAt(0, 0, -100);
@@ -2397,6 +2643,12 @@
         }
         function restartGame() {
             document.getElementById('gowindow').style.display = 'none';
+            document.getElementById('mp-gowindow').style.display = 'none';
+            document.getElementById('mp-waiting-overlay').classList.remove('show');
+            if (MP.isPlaying) {
+                MP.localDead = false;
+                MP.remoteDead = {};
+            }
             player = null; // ensure clean state
             startGame();
         }
@@ -2478,6 +2730,13 @@
             // Initial hit explosion + sounds
             createExplosion(player.position, 0xff6600, 18);
             sfxExplode(1.0);
+
+            // Multiplayer: notify others we died
+            if (MP.isPlaying) {
+                MP.localDead = true;
+                MP.remoteDead = {};
+                MP.sendDead();
+            }
 
             state = S.CRASHING;
         }
@@ -2590,15 +2849,23 @@
             // ── 4. Show game over menu after full duration ──
             if (t >= dur) {
                 state = S.GAMEOVER;
-                document.getElementById('go-score').textContent = score;
-                document.getElementById('go-kills').textContent = kills;
-                document.getElementById('go-wave').textContent = wave;
-                document.getElementById('go-acc').textContent = (shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0) + '%';
-                document.getElementById('gowindow').style.display = 'block';
+                if (MP.isPlaying) {
+                    // MP: show waiting overlay, check if all already dead
+                    document.getElementById('mp-waiting-overlay').classList.add('show');
+                    MP._checkAllDead();
+                } else {
+                    // Singleplayer game over
+                    document.getElementById('go-score').textContent = score;
+                    document.getElementById('go-kills').textContent = kills;
+                    document.getElementById('go-wave').textContent = wave;
+                    document.getElementById('go-acc').textContent = (shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0) + '%';
+                    document.getElementById('gowindow').style.display = 'block';
+                }
             }
         }
         function backToMenu() {
             document.getElementById('gowindow').style.display = 'none';
+            document.getElementById('nick-canvas').style.display = 'none';
             document.getElementById('menu').style.display = 'block';
             clearEntities();
             buildPreview();
@@ -2608,6 +2875,51 @@
             state = S.MENU;
             MP.isPlaying = false;
         }
+
+        function showMPGameOver() {
+            document.getElementById('mp-go-score').textContent = score;
+            document.getElementById('mp-go-kills').textContent = kills;
+            document.getElementById('mp-go-wave').textContent = wave;
+            document.getElementById('mp-go-acc').textContent = (shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0) + '%';
+            document.getElementById('mp-go-sub').textContent = 'A batalha terminou. Todos os pilotos caíram!';
+            document.getElementById('mp-gowindow').style.display = 'block';
+            document.getElementById('nick-canvas').style.display = 'none';
+        }
+
+        document.getElementById('mp-btn-back-server').addEventListener('click', () => {
+            // Return to multiplayer lobby — reopen the MP modal and reset game state
+            document.getElementById('mp-gowindow').style.display = 'none';
+            document.getElementById('mp-waiting-overlay').classList.remove('show');
+            document.getElementById('menu').style.display = 'block';
+            clearEntities();
+            buildPreview();
+            orbit.theta = 0.55; orbit.targetTheta = 0.55;
+            orbit.phi = 0.28; orbit.targetPhi = 0.28;
+            orbit.radius = 26;
+            state = S.MENU;
+            // Keep MP connection alive, reopen MP modal
+            MP.isPlaying = false;
+            MP.localDead = false;
+            MP.remoteDead = {};
+            // Reset player meshes for potential rematch
+            for (const id in MP.players) {
+                if (MP.players[id].mesh) { scene.remove(MP.players[id].mesh); MP.players[id].mesh = null; }
+            }
+            openMP();
+        });
+
+        document.getElementById('mp-btn-leave').addEventListener('click', () => {
+            document.getElementById('mp-gowindow').style.display = 'none';
+            document.getElementById('mp-waiting-overlay').classList.remove('show');
+            document.getElementById('menu').style.display = 'block';
+            clearEntities();
+            buildPreview();
+            orbit.theta = 0.55; orbit.targetTheta = 0.55;
+            orbit.phi = 0.28; orbit.targetPhi = 0.28;
+            orbit.radius = 26;
+            state = S.MENU;
+            MP.reset();
+        });
         function clearEntities() {
             [...bullets, ...eBullets].forEach(b => scene.remove(b.mesh));
             enemies.forEach(e => scene.remove(e));
@@ -2615,6 +2927,8 @@
             particles.forEach(p => scene.remove(p.mesh));
             powerups.forEach(p => scene.remove(p));
             bullets = []; eBullets = []; enemies = []; clouds = []; particles = []; powerups = [];
+            // Clear nick canvas
+            if (nickCtx) nickCtx.clearRect(0, 0, nickCanvas.width, nickCanvas.height);
             // Remove remote player meshes but keep connections
             for (const id in MP.players) {
                 if (MP.players[id].mesh) { scene.remove(MP.players[id].mesh); MP.players[id].mesh = null; }
@@ -2854,10 +3168,34 @@
             player.position.x += Math.sin(windOffset * .8) * .018;
             const prop = player.getObjectByName('prop'); if (prop) prop.rotation.z += 20 * boostMult * dt;
 
-            // Camera follow
-            camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x * .38, .08);
-            camera.position.y = THREE.MathUtils.lerp(camera.position.y, player.position.y * .38 + 6, .08);
-            camera.lookAt(player.position.x * .2, player.position.y * .2, -80);
+            // Camera follow — in MP show both players; in SP follow only local
+            if (MP.isPlaying) {
+                // Find bounding box of all players
+                let minX = player.position.x, maxX = player.position.x;
+                let minY = player.position.y, maxY = player.position.y;
+                for (const id in MP.players) {
+                    const rp = MP.players[id];
+                    if (rp.mesh) {
+                        minX = Math.min(minX, rp.mesh.position.x);
+                        maxX = Math.max(maxX, rp.mesh.position.x);
+                        minY = Math.min(minY, rp.mesh.position.y);
+                        maxY = Math.max(maxY, rp.mesh.position.y);
+                    }
+                }
+                const cx = (minX + maxX) * .5;
+                const cy = (minY + maxY) * .5;
+                const spread = Math.max(maxX - minX, maxY - minY, 12);
+                // Pull camera back more to fit both players
+                const pullback = 28 + spread * .55;
+                camera.position.x = THREE.MathUtils.lerp(camera.position.x, cx * .32, .07);
+                camera.position.y = THREE.MathUtils.lerp(camera.position.y, cy * .32 + 6, .07);
+                camera.position.z = THREE.MathUtils.lerp(camera.position.z, pullback, .07);
+                camera.lookAt(cx * .18, cy * .18, -80);
+            } else {
+                camera.position.x = THREE.MathUtils.lerp(camera.position.x, player.position.x * .38, .08);
+                camera.position.y = THREE.MathUtils.lerp(camera.position.y, player.position.y * .38 + 6, .08);
+                camera.lookAt(player.position.x * .2, player.position.y * .2, -80);
+            }
 
             updateBullets(dt);
             updateEBullets(dt);
@@ -2867,6 +3205,7 @@
             updateParticles(dt);
             updateScenery(dt, true);
             updateHUD();
+            updateNickLabels();
             // Animate remote player props
             for (const id in MP.players) {
                 const rp = MP.players[id];
@@ -2931,14 +3270,16 @@
 
         function updateEnemies(dt) {
             const gs = 1 + wave * .05;
+            // In MP, find the target player (local if alive, else skip)
+            const targetPlayer = player;
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const en = enemies[i];
                 const spd = en.userData.isBoss ? 20 : 32;
                 en.position.z += spd * gs * dt;
-                if (player) {
+                if (targetPlayer) {
                     // Homing + strafing
-                    const dx = player.position.x - en.position.x;
-                    const dy = player.position.y - en.position.y;
+                    const dx = targetPlayer.position.x - en.position.x;
+                    const dy = targetPlayer.position.y - en.position.y;
                     const homing = en.userData.isBoss ? .025 : .015;
                     en.position.x += dx * homing + Math.sin(Date.now() * .0015 + en.userData.movePhase) * en.userData.strafeAmp * .03;
                     en.position.y += dy * .01;
@@ -2947,7 +3288,7 @@
 
                 // Shooting
                 const now = Date.now();
-                if (player && now - en.userData.lastShot > en.userData.shootCD && en.position.z > -300) {
+                if (targetPlayer && now - en.userData.lastShot > en.userData.shootCD && en.position.z > -300) {
                     en.userData.lastShot = now; enemyShoot(en);
                     // Boss shoots 3 at once
                     if (en.userData.isBoss) {
@@ -2957,7 +3298,7 @@
                 }
 
                 // Collision with player
-                if (player && en.position.distanceTo(player.position) < en.userData.radius + player.userData.radius) {
+                if (targetPlayer && en.position.distanceTo(targetPlayer.position) < en.userData.radius + targetPlayer.userData.radius) {
                     const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
                     createExplosion(en.position, col, 30); sfxExplode(1.5);
                     scene.remove(en); enemies.splice(i, 1);
