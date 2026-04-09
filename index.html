@@ -104,6 +104,7 @@
             overflow: hidden;
             box-shadow: 0 8px 50px rgba(0,0,0,.8), 0 0 0 1px rgba(70,120,220,.35);
         }
+
         .win7-titlebar {
             background: linear-gradient(180deg, #4a90d9 0%, #235faf 45%, #1a4d9c 55%, #2d6ac4 100%);
             padding: 6px 10px 6px 10px;
@@ -113,9 +114,14 @@
             border-radius: 8px 8px 0 0;
             border-bottom: 1px solid #1a3a80;
         }
+
         .win7-icon {
-            width: 18px; height: 18px; font-size: 16px; line-height: 1;
+            width: 18px;
+            height: 18px;
+            font-size: 16px;
+            line-height: 1;
         }
+
         .win7-title-text {
             flex: 1;
             font-family: 'Segoe UI', Tahoma, sans-serif;
@@ -125,21 +131,30 @@
             text-shadow: 0 1px 2px rgba(0,0,0,.5);
             letter-spacing: .3px;
         }
+
         .win7-btns {
-            display: flex; gap: 2px;
+            display: flex;
+            gap: 2px;
         }
+
         .win7-btn {
-            width: 22px; height: 18px;
+            width: 22px;
+            height: 18px;
             background: linear-gradient(180deg,#6ab0f5,#3a7ed4);
             border: 1px solid #1a4a99;
             border-radius: 3px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 10px; color: #fff; cursor: default;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #fff;
+            cursor: default;
             text-shadow: 0 1px 1px rgba(0,0,0,.5);
         }
-        .win7-btn.close-btn {
-            background: linear-gradient(180deg,#f56a6a,#c0392b);
-        }
+
+            .win7-btn.close-btn {
+                background: linear-gradient(180deg,#f56a6a,#c0392b);
+            }
 
         /* ───── UI LAYER ───── */
         #ui {
@@ -167,9 +182,10 @@
             pointer-events: none;
             z-index: 10;
         }
-        #gowindow-wrapper > * {
-            pointer-events: auto;
-        }
+
+            #gowindow-wrapper > * {
+                pointer-events: auto;
+            }
 
         /* ───── MAIN MENU ───── */
         #menu {
@@ -177,8 +193,13 @@
         }
 
         /* 7.css overrides — prevent it from stomping game UI */
-        body { font-family: var(--ui-font); }
-        button, input { font-family: var(--ui-font); }
+        body {
+            font-family: var(--ui-font);
+        }
+
+        button, input {
+            font-family: var(--ui-font);
+        }
         /* Reset 7.css button styles for our custom buttons */
         .btn-launch, .btn-go, .part-btn, .mtab {
             box-shadow: none;
@@ -852,53 +873,180 @@
             font-family: var(--ui-font);
         }
         /* Re-apply fixed positioning after revert */
-        #hud { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 10; }
-        #pubar { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); display: none; gap: 10px; z-index: 10; pointer-events: none; }
-        #notifs { position: fixed; top: 88px; right: 14px; display: flex; flex-direction: column; gap: 7px; z-index: 30; pointer-events: none; }
-        #wavebanner { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 40; opacity: 0; transition: opacity .3s; }
-        #dmgflash { position: fixed; inset: 0; z-index: 50; background: rgba(255,50,50,0); pointer-events: none; transition: background .05s; }
-        #xhair { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 36px; height: 36px; display: none; pointer-events: none; z-index: 20; }
-        #boss-bar { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: 380px; display: none; text-align: center; }
-        #tctrl { position: fixed; bottom: 22px; left: 22px; display: none; gap: 8px; flex-direction: column; align-items: center; z-index: 10; pointer-events: auto; }
-        #tfire { position: fixed; bottom: 22px; right: 22px; width: 74px; height: 74px; background: linear-gradient(135deg,rgba(200,30,30,.85),rgba(110,0,0,.85)); border: 2px solid rgba(255,100,100,.4); border-radius: 50%; font-size: 28px; display: none; align-items: center; justify-content: center; cursor: pointer; z-index: 10; pointer-events: auto; touch-action: manipulation; }
+        #hud {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            display: none;
+            z-index: 10;
+        }
+
+        #pubar {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 10px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #notifs {
+            position: fixed;
+            top: 88px;
+            right: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            z-index: 30;
+            pointer-events: none;
+        }
+
+        #wavebanner {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 40;
+            opacity: 0;
+            transition: opacity .3s;
+        }
+
+        #dmgflash {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(255,50,50,0);
+            pointer-events: none;
+            transition: background .05s;
+        }
+
+        #xhair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            width: 36px;
+            height: 36px;
+            display: none;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        #boss-bar {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 380px;
+            display: none;
+            text-align: center;
+        }
+
+        #tctrl {
+            position: fixed;
+            bottom: 22px;
+            left: 22px;
+            display: none;
+            gap: 8px;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        #tfire {
+            position: fixed;
+            bottom: 22px;
+            right: 22px;
+            width: 74px;
+            height: 74px;
+            background: linear-gradient(135deg,rgba(200,30,30,.85),rgba(110,0,0,.85));
+            border: 2px solid rgba(255,100,100,.4);
+            border-radius: 50%;
+            font-size: 28px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            pointer-events: auto;
+            touch-action: manipulation;
+        }
         /* Buttons inside game chrome */
         .btn-launch, .btn-go {
             display: block;
             box-sizing: border-box;
             font-family: 'Black Han Sans', sans-serif !important;
         }
+
         .btn-launch {
-            width: 100%; padding: 15px;
+            width: 100%;
+            padding: 15px;
             background: linear-gradient(135deg,#1a6bff,#0044cc) !important;
-            border: none !important; border-radius: 12px !important;
-            font-size: 24px !important; letter-spacing: 2px;
-            color: #fff !important; cursor: pointer;
+            border: none !important;
+            border-radius: 12px !important;
+            font-size: 24px !important;
+            letter-spacing: 2px;
+            color: #fff !important;
+            cursor: pointer;
             box-shadow: 0 4px 24px rgba(30,100,255,.55) !important;
-            transition: transform .15s,box-shadow .15s; position: relative; overflow: hidden;
+            transition: transform .15s,box-shadow .15s;
+            position: relative;
+            overflow: hidden;
             margin-top: 16px;
         }
-        .btn-launch:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(30,100,255,.75) !important; }
+
+            .btn-launch:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 32px rgba(30,100,255,.75) !important;
+            }
+
         .btn-restart {
             background: linear-gradient(135deg,#cc2222,#881111) !important;
-            border: none !important; border-radius: 12px !important;
+            border: none !important;
+            border-radius: 12px !important;
             box-shadow: 0 4px 20px rgba(200,30,30,.4) !important;
         }
-        .btn-restart:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(200,30,30,.65) !important; }
+
+            .btn-restart:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 30px rgba(200,30,30,.65) !important;
+            }
+
         .btn-menu {
             background: linear-gradient(135deg,#225fcc,#113388) !important;
-            border: none !important; border-radius: 12px !important;
-            box-shadow: 0 4px 20px rgba(30,80,200,.4) !important; margin-top: 8px;
+            border: none !important;
+            border-radius: 12px !important;
+            box-shadow: 0 4px 20px rgba(30,80,200,.4) !important;
+            margin-top: 8px;
         }
-        .btn-menu:hover { transform: translateY(-2px); }
+
+            .btn-menu:hover {
+                transform: translateY(-2px);
+            }
+
         .tbtn {
-            width: 58px; height: 58px;
+            width: 58px;
+            height: 58px;
             background: rgba(8,14,38,.8) !important;
             border: 1px solid rgba(100,150,255,.3) !important;
-            border-radius: 14px !important; color: rgba(200,220,255,.8) !important;
-            font-size: 24px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; touch-action: manipulation;
+            border-radius: 14px !important;
+            color: rgba(200,220,255,.8) !important;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
         }
-        .tbtn:active { background: rgba(30,60,160,.8) !important; }
+
+            .tbtn:active {
+                background: rgba(30,60,160,.8) !important;
+            }
         /* part-btn and mtab overrides */
         .mtab, .part-btn {
             background: rgba(0,0,0,.3) !important;
@@ -906,20 +1054,267 @@
             color: rgba(160,190,255,.55) !important;
             cursor: pointer !important;
         }
-        .mtab.active, .part-btn.active {
-            background: rgba(30,60,160,.5) !important;
-            border-color: rgba(100,160,255,.5) !important;
-            color: #b8d0ff !important;
-        }
+
+            .mtab.active, .part-btn.active {
+                background: rgba(30,60,160,.5) !important;
+                border-color: rgba(100,160,255,.5) !important;
+                color: #b8d0ff !important;
+            }
         /* color inputs */
         input[type=color] {
-            width: 40px !important; height: 40px !important;
-            border: none !important; border-radius: 9px !important;
-            cursor: pointer; background: none !important; padding: 2px !important;
+            width: 40px !important;
+            height: 40px !important;
+            border: none !important;
+            border-radius: 9px !important;
+            cursor: pointer;
+            background: none !important;
+            padding: 2px !important;
             box-shadow: 0 0 0 1px rgba(100,150,255,.3) !important;
         }
+
+        /* ───── NICK INPUT ───── */
+        .nick-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px 4px;
+        }
+
+        .nick-lbl {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(140,170,255,.6);
+            white-space: nowrap;
+        }
+
+        .nick-input {
+            flex: 1;
+            background: rgba(0,0,0,.35);
+            border: 1px solid rgba(100,160,255,.3);
+            border-radius: 8px;
+            padding: 7px 10px;
+            color: #c8d8ff;
+            font-size: 13px;
+            font-family: var(--ui-font);
+            font-weight: 700;
+            outline: none;
+            transition: border-color .15s;
+        }
+
+            .nick-input:focus {
+                border-color: rgba(100,160,255,.7);
+            }
+
+        /* ───── MULTIPLAYER MODAL ───── */
+        #mp-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(5,10,25,.75);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+            #mp-modal.open {
+                display: flex;
+            }
+
+        .mp-panel {
+            background: rgba(8,14,38,.98);
+            border: 1px solid rgba(100,160,255,.3);
+            border-radius: 12px;
+            padding: 28px 30px;
+            width: 380px;
+            color: #ddeeff;
+            box-shadow: 0 12px 60px rgba(0,0,0,.8);
+        }
+
+        .mp-title {
+            font-family: 'Black Han Sans',sans-serif;
+            font-size: 22px;
+            letter-spacing: 2px;
+            color: var(--gold);
+            margin-bottom: 18px;
+            text-align: center;
+        }
+
+        .mp-btn-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .mp-tab-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: 1px solid rgba(100,160,255,.35);
+            border-radius: 10px;
+            background: rgba(20,40,120,.5);
+            color: #b8d0ff;
+            font-family: var(--ui-font);
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all .15s;
+            text-align: center;
+        }
+
+            .mp-tab-btn:hover {
+                background: rgba(30,60,160,.65);
+                border-color: rgba(100,160,255,.6);
+            }
+
+            .mp-tab-btn.active {
+                background: rgba(30,60,160,.8);
+                border-color: var(--gold);
+                color: var(--gold);
+            }
+
+        .mp-section {
+            display: none;
+        }
+
+            .mp-section.open {
+                display: block;
+            }
+
+        .mp-lbl {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: rgba(140,170,255,.55);
+            margin-bottom: 7px;
+        }
+
+        .mp-input {
+            width: 100%;
+            background: rgba(0,0,0,.4);
+            border: 1px solid rgba(100,160,255,.3);
+            border-radius: 8px;
+            padding: 9px 12px;
+            color: #c8d8ff;
+            font-size: 14px;
+            font-family: var(--ui-font);
+            font-weight: 700;
+            outline: none;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+            .mp-input:focus {
+                border-color: rgba(100,160,255,.7);
+            }
+
+        .mp-info {
+            background: rgba(0,0,0,.3);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: rgba(180,200,255,.7);
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+            .mp-info b {
+                color: var(--gold);
+            }
+
+        .mp-code {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 900;
+            color: var(--green);
+            letter-spacing: 3px;
+            background: rgba(0,0,0,.4);
+            border-radius: 6px;
+            padding: 6px 12px;
+            display: inline-block;
+            margin: 4px 0;
+            cursor: pointer;
+            user-select: all;
+        }
+
+        .mp-status {
+            font-size: 12px;
+            color: rgba(180,200,255,.6);
+            margin-bottom: 10px;
+            min-height: 18px;
+        }
+
+            .mp-status.ok {
+                color: var(--green);
+            }
+
+            .mp-status.err {
+                color: var(--red);
+            }
+
+        .mp-player-list {
+            background: rgba(0,0,0,.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 12px;
+            min-height: 36px;
+        }
+
+        .mp-player-item {
+            padding: 3px 0;
+            color: #b8d0ff;
+            border-bottom: 1px solid rgba(255,255,255,.05);
+        }
+
+            .mp-player-item:last-child {
+                border-bottom: none;
+            }
+
+        .mp-close-btn {
+            width: 100%;
+            padding: 10px;
+            background: rgba(80,20,20,.5);
+            border: 1px solid rgba(255,80,80,.3);
+            border-radius: 8px;
+            color: rgba(255,160,160,.8);
+            font-family: var(--ui-font);
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+            .mp-close-btn:hover {
+                background: rgba(120,30,30,.6);
+            }
+
+        .btn-mp {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg,#0f6b3f,#0a4a2c);
+            border: none;
+            border-radius: 12px;
+            font-family: 'Black Han Sans',sans-serif;
+            font-size: 20px;
+            letter-spacing: 2px;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 4px 24px rgba(10,180,90,.35);
+            transition: transform .15s,box-shadow .15s;
+            margin-top: 8px;
+        }
+
+            .btn-mp:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 32px rgba(10,180,90,.55);
+            }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
     <canvas id="gc"></canvas>
@@ -939,117 +1334,122 @@
                 </div>
             </div>
             <div class="panel" style="border-radius:0 0 4px 4px; border-top:none;">
-            <div class="mhdr">
-                <div class="mtitle">BLIMPZ</div>
-                <div class="msub">Combat Airship &mdash; Sky Battle</div>
-            </div>
-            <div class="mbody">
-                <div class="menu-tabs">
-                    <div class="mtab active" data-tab="workshop">🔧 Oficina</div>
-                    <div class="mtab" data-tab="controls">🎮 Controles</div>
+                <div class="mhdr">
+                    <div class="mtitle">BLIMPZ</div>
+                    <div class="msub">Combat Airship &mdash; Sky Battle</div>
                 </div>
-
-                <!-- WORKSHOP TAB -->
-                <div class="tab-content active ws-scroll" id="tab-workshop">
-
-                    <div class="ws-section">
-                        <div class="ws-label">🎨 Pintura</div>
-                        <div class="colgrid">
-                            <div class="citem"><input type="color" id="c-env" value="#e63333"><span>Balão</span></div>
-                            <div class="citem"><input type="color" id="c-gon" value="#8B4513"><span>Cabine</span></div>
-                            <div class="citem"><input type="color" id="c-fin" value="#2244dd"><span>Aletas</span></div>
-                            <div class="citem"><input type="color" id="c-prop" value="#cccccc"><span>Hélice</span></div>
-                        </div>
-                        <div class="colgrid" style="margin-top:6px;">
-                            <div class="citem"><input type="color" id="c-nose" value="#aa2222"><span>Nariz</span></div>
-                            <div class="citem"><input type="color" id="c-stripe" value="#FFD700"><span>Faixa</span></div>
-                            <div class="citem"><input type="color" id="c-gondola2" value="#5a2d0c"><span>Detalhe</span></div>
-                            <div class="citem"><input type="color" id="c-trim" value="#ffffff"><span>Acabamento</span></div>
-                        </div>
-                    </div>
-
-                    <div class="ws-section">
-                        <div class="ws-label">🎈 Formato do Balão</div>
-                        <div class="parts-row" id="shape-btns">
-                            <div class="part-btn active" data-shape="classic">Clássico</div>
-                            <div class="part-btn" data-shape="fat">Rechonchudo</div>
-                            <div class="part-btn" data-shape="sleek">Aerodinâmico</div>
-                            <div class="part-btn" data-shape="double">Duplo</div>
-                        </div>
-                    </div>
-
-                    <div class="ws-section">
-                        <div class="ws-label">⚙️ Aletas</div>
-                        <div class="parts-row" id="fin-btns">
-                            <div class="part-btn active" data-fin="standard">Padrão</div>
-                            <div class="part-btn" data-fin="delta">Delta</div>
-                            <div class="part-btn" data-fin="wide">Largas</div>
-                            <div class="part-btn" data-fin="none">Sem Aletas</div>
-                        </div>
-                    </div>
-
-                    <div class="ws-section">
-                        <div class="ws-label">🛸 Cabine</div>
-                        <div class="parts-row" id="gondola-btns">
-                            <div class="part-btn active" data-gondola="box">Caixa</div>
-                            <div class="part-btn" data-gondola="sleek">Afilada</div>
-                            <div class="part-btn" data-gondola="open">Aberta</div>
-                        </div>
-                    </div>
-
-                    <div class="ws-section">
-                        <div class="ws-label">🔫 Canhão</div>
-                        <div class="parts-row" id="gun-btns">
-                            <div class="part-btn active" data-gun="single">Simples</div>
-                            <div class="part-btn" data-gun="double">Duplo</div>
-                            <div class="part-btn" data-gun="gatling">Gatling</div>
-                        </div>
-                    </div>
-
-                    <div class="ws-section">
-                        <div class="ws-label">🏅 Emblema</div>
-                        <div class="parts-row" id="emblem-btns">
-                            <div class="part-btn active" data-emblem="none">Nenhum</div>
-                            <div class="part-btn" data-emblem="star">⭐ Estrela</div>
-                            <div class="part-btn" data-emblem="skull">💀 Caveira</div>
-                            <div class="part-btn" data-emblem="bolt">⚡ Raio</div>
-                        </div>
-                    </div>
-
-                    <div class="ws-section">
-                        <div class="ws-label">📊 Atributos</div>
-                        <div class="stat-preview">
-                            <div class="sp-bar"><div class="sp-name">Velocidade</div><div class="sp-track"><div class="sp-fill" id="sp-speed" style="width:60%;background:linear-gradient(90deg,#44FF88,#00cc55);"></div></div></div>
-                            <div class="sp-bar"><div class="sp-name">Cadência</div><div class="sp-track"><div class="sp-fill" id="sp-fire" style="width:40%;background:linear-gradient(90deg,#FF8C00,#FF4400);"></div></div></div>
-                            <div class="sp-bar"><div class="sp-name">Resistência</div><div class="sp-track"><div class="sp-fill" id="sp-armor" style="width:50%;background:linear-gradient(90deg,#4488FF,#0055cc);"></div></div></div>
-                        </div>
-                    </div>
+                <!-- Nick row -->
+                <div class="nick-row">
+                    <span class="nick-lbl">✈ Nick</span>
+                    <input type="text" class="nick-input" id="nick-input" maxlength="16" placeholder="Seu piloto..." autocomplete="off">
                 </div>
-
-                <!-- CONTROLS TAB -->
-                <div class="tab-content" id="tab-controls">
-                    <div class="ctrl-box">
-                        <b>WASD / Setas</b> — Mover nave<br>
-                        <b>Espaço</b> — Atirar<br>
-                        <b>Shift</b> — Turbo (consome energia)<br><br>
-                        Destrua inimigos e sobreviva às ondas.<br>
-                        Desvie de <b>nuvens de tempestade</b> ☁️ — causam dano contínuo.<br>
-                        Colete power-ups para vantagens temporárias:<br>
-                        <b>⚡ Tiro Rápido</b> — cadência 3x maior<br>
-                        <b>🛡 Escudo</b> — imunidade a tudo<br>
-                        <b>💥 Spread</b> — disparo em leque<br>
-                        <b>❤️ Reparo</b> — recupera 30 HP<br>
-                        <b>🔥 Inferno</b> — tiros causam dano em área<br><br>
-                        Chefes aparecem nas ondas 5, 10, 15...
+                <div class="mbody">
+                    <div class="menu-tabs">
+                        <div class="mtab active" data-tab="workshop">🔧 Oficina</div>
+                        <div class="mtab" data-tab="controls">🎮 Controles</div>
                     </div>
-                </div>
 
-                <button class="btn-launch" id="btn-start" style="margin-top:16px;">✈ DECOLAR!</button>
-            </div><!-- /.mbody -->
-        </div><!-- /.panel -->
+                    <!-- WORKSHOP TAB -->
+                    <div class="tab-content active ws-scroll" id="tab-workshop">
+
+                        <div class="ws-section">
+                            <div class="ws-label">🎨 Pintura</div>
+                            <div class="colgrid">
+                                <div class="citem"><input type="color" id="c-env" value="#e63333"><span>Balão</span></div>
+                                <div class="citem"><input type="color" id="c-gon" value="#8B4513"><span>Cabine</span></div>
+                                <div class="citem"><input type="color" id="c-fin" value="#2244dd"><span>Aletas</span></div>
+                                <div class="citem"><input type="color" id="c-prop" value="#cccccc"><span>Hélice</span></div>
+                            </div>
+                            <div class="colgrid" style="margin-top:6px;">
+                                <div class="citem"><input type="color" id="c-nose" value="#aa2222"><span>Nariz</span></div>
+                                <div class="citem"><input type="color" id="c-stripe" value="#FFD700"><span>Faixa</span></div>
+                                <div class="citem"><input type="color" id="c-gondola2" value="#5a2d0c"><span>Detalhe</span></div>
+                                <div class="citem"><input type="color" id="c-trim" value="#ffffff"><span>Acabamento</span></div>
+                            </div>
+                        </div>
+
+                        <div class="ws-section">
+                            <div class="ws-label">🎈 Formato do Balão</div>
+                            <div class="parts-row" id="shape-btns">
+                                <div class="part-btn active" data-shape="classic">Clássico</div>
+                                <div class="part-btn" data-shape="fat">Rechonchudo</div>
+                                <div class="part-btn" data-shape="sleek">Aerodinâmico</div>
+                                <div class="part-btn" data-shape="double">Duplo</div>
+                            </div>
+                        </div>
+
+                        <div class="ws-section">
+                            <div class="ws-label">⚙️ Aletas</div>
+                            <div class="parts-row" id="fin-btns">
+                                <div class="part-btn active" data-fin="standard">Padrão</div>
+                                <div class="part-btn" data-fin="delta">Delta</div>
+                                <div class="part-btn" data-fin="wide">Largas</div>
+                                <div class="part-btn" data-fin="none">Sem Aletas</div>
+                            </div>
+                        </div>
+
+                        <div class="ws-section">
+                            <div class="ws-label">🛸 Cabine</div>
+                            <div class="parts-row" id="gondola-btns">
+                                <div class="part-btn active" data-gondola="box">Caixa</div>
+                                <div class="part-btn" data-gondola="sleek">Afilada</div>
+                                <div class="part-btn" data-gondola="open">Aberta</div>
+                            </div>
+                        </div>
+
+                        <div class="ws-section">
+                            <div class="ws-label">🔫 Canhão</div>
+                            <div class="parts-row" id="gun-btns">
+                                <div class="part-btn active" data-gun="single">Simples</div>
+                                <div class="part-btn" data-gun="double">Duplo</div>
+                                <div class="part-btn" data-gun="gatling">Gatling</div>
+                            </div>
+                        </div>
+
+                        <div class="ws-section">
+                            <div class="ws-label">🏅 Emblema</div>
+                            <div class="parts-row" id="emblem-btns">
+                                <div class="part-btn active" data-emblem="none">Nenhum</div>
+                                <div class="part-btn" data-emblem="star">⭐ Estrela</div>
+                                <div class="part-btn" data-emblem="skull">💀 Caveira</div>
+                                <div class="part-btn" data-emblem="bolt">⚡ Raio</div>
+                            </div>
+                        </div>
+
+                        <div class="ws-section">
+                            <div class="ws-label">📊 Atributos</div>
+                            <div class="stat-preview">
+                                <div class="sp-bar"><div class="sp-name">Velocidade</div><div class="sp-track"><div class="sp-fill" id="sp-speed" style="width:60%;background:linear-gradient(90deg,#44FF88,#00cc55);"></div></div></div>
+                                <div class="sp-bar"><div class="sp-name">Cadência</div><div class="sp-track"><div class="sp-fill" id="sp-fire" style="width:40%;background:linear-gradient(90deg,#FF8C00,#FF4400);"></div></div></div>
+                                <div class="sp-bar"><div class="sp-name">Resistência</div><div class="sp-track"><div class="sp-fill" id="sp-armor" style="width:50%;background:linear-gradient(90deg,#4488FF,#0055cc);"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROLS TAB -->
+                    <div class="tab-content" id="tab-controls">
+                        <div class="ctrl-box">
+                            <b>WASD / Setas</b> — Mover nave<br>
+                            <b>Espaço</b> — Atirar<br>
+                            <b>Shift</b> — Turbo (consome energia)<br><br>
+                            Destrua inimigos e sobreviva às ondas.<br>
+                            Desvie de <b>nuvens de tempestade</b> ☁️ — causam dano contínuo.<br>
+                            Colete power-ups para vantagens temporárias:<br>
+                            <b>⚡ Tiro Rápido</b> — cadência 3x maior<br>
+                            <b>🛡 Escudo</b> — imunidade a tudo<br>
+                            <b>💥 Spread</b> — disparo em leque<br>
+                            <b>❤️ Reparo</b> — recupera 30 HP<br>
+                            <b>🔥 Inferno</b> — tiros causam dano em área<br><br>
+                            Chefes aparecem nas ondas 5, 10, 15...
+                        </div>
+                    </div>
+
+                    <button class="btn-launch" id="btn-start" style="margin-top:16px;">✈ DECOLAR!</button>
+                    <button class="btn-mp" id="btn-mp">🌐 MULTIPLAYER</button>
+                </div><!-- /.mbody -->
+            </div><!-- /.panel -->
         </div><!-- /.win7-window / #menu -->
     </div><!-- /#ui -->
-
     <!-- GAME OVER — centered separately -->
     <div id="gowindow-wrapper">
         <div class="win7-window" id="gowindow" style="display:none;">
@@ -1061,20 +1461,19 @@
                 </div>
             </div>
             <div class="panel" style="border-radius:0 0 4px 4px; border-top:none; text-align:center; width:370px; padding:24px 28px 28px;">
-            <div class="gotitle">DESTRUÍDO</div>
-            <div class="gosub">Seu dirigível não resistiu.</div>
-            <div class="gostats">
-                <div class="si"><div class="sv" id="go-score">0</div><div class="sl">Pontos</div></div>
-                <div class="si"><div class="sv" id="go-kills">0</div><div class="sl">Abatidos</div></div>
-                <div class="si"><div class="sv" id="go-wave">1</div><div class="sl">Onda</div></div>
-                <div class="si"><div class="sv" id="go-acc">0%</div><div class="sl">Precisão</div></div>
-            </div>
-            <button class="btn-go btn-restart" id="btn-restart">↩ TENTAR NOVAMENTE</button>
-            <button class="btn-go btn-menu" id="btn-menu">🔧 OFICINA</button>
+                <div class="gotitle">DESTRUÍDO</div>
+                <div class="gosub">Seu dirigível não resistiu.</div>
+                <div class="gostats">
+                    <div class="si"><div class="sv" id="go-score">0</div><div class="sl">Pontos</div></div>
+                    <div class="si"><div class="sv" id="go-kills">0</div><div class="sl">Abatidos</div></div>
+                    <div class="si"><div class="sv" id="go-wave">1</div><div class="sl">Onda</div></div>
+                    <div class="si"><div class="sv" id="go-acc">0%</div><div class="sl">Precisão</div></div>
+                </div>
+                <button class="btn-go btn-restart" id="btn-restart">↩ TENTAR NOVAMENTE</button>
+                <button class="btn-go btn-menu" id="btn-menu">🔧 OFICINA</button>
             </div><!-- /.panel -->
         </div><!-- /.win7-window -->
     </div><!-- /#gowindow-wrapper -->
-
     <!-- HUD -->
     <div id="hud">
         <div id="hud-top">
@@ -1115,10 +1514,303 @@
     </div>
     <div id="tfire">🔥</div>
 
+    <!-- MULTIPLAYER MODAL -->
+    <div id="mp-modal">
+        <div class="mp-panel">
+            <div class="mp-title">🌐 MULTIPLAYER</div>
+            <div class="mp-btn-row">
+                <button class="mp-tab-btn active" id="mp-tab-host">📡 Hospedar</button>
+                <button class="mp-tab-btn" id="mp-tab-join">🔍 Entrar</button>
+            </div>
+
+            <!-- HOST SECTION -->
+            <div class="mp-section open" id="mp-host-section">
+                <div class="mp-lbl">Nome do Servidor</div>
+                <input type="text" class="mp-input" id="mp-server-name" maxlength="24" placeholder="Meu Servidor..." autocomplete="off">
+                <div id="mp-host-waiting" style="display:none">
+                    <div class="mp-info">
+                        Compartilhe o código com os outros jogadores:<br>
+                        <span class="mp-code" id="mp-room-code" title="Clique para copiar">---</span>
+                        <br><small style="color:rgba(140,170,255,.5);font-size:10px">Clique no código para copiar</small>
+                    </div>
+                    <div class="mp-lbl">Jogadores na sala</div>
+                    <div class="mp-player-list" id="mp-player-list">
+                        <div class="mp-player-item" id="mp-host-self">— aguardando jogadores...</div>
+                    </div>
+                    <button class="btn-launch" id="mp-start-btn" style="margin-top:0;font-size:18px;padding:12px;">🚀 INICIAR PARTIDA</button>
+                </div>
+                <div id="mp-host-setup">
+                    <button class="btn-launch" id="mp-host-btn" style="margin-top:0;font-size:18px;padding:12px;">📡 CRIAR SERVIDOR</button>
+                </div>
+                <div class="mp-status" id="mp-host-status"></div>
+            </div>
+
+            <!-- JOIN SECTION -->
+            <div class="mp-section" id="mp-join-section">
+                <div class="mp-lbl">Código do Servidor</div>
+                <input type="text" class="mp-input" id="mp-join-code" maxlength="20" placeholder="Cole o código aqui..." autocomplete="off" style="text-transform:uppercase;letter-spacing:2px;">
+                <div id="mp-join-lobby" style="display:none">
+                    <div class="mp-info" id="mp-join-info">Conectado! Aguardando o host iniciar...</div>
+                    <div class="mp-lbl">Jogadores</div>
+                    <div class="mp-player-list" id="mp-join-player-list">—</div>
+                </div>
+                <div id="mp-join-setup">
+                    <button class="btn-launch" id="mp-join-btn" style="margin-top:0;font-size:18px;padding:12px;">🔍 ENTRAR</button>
+                </div>
+                <div class="mp-status" id="mp-join-status"></div>
+            </div>
+
+            <button class="mp-close-btn" id="mp-close">✕ Fechar</button>
+        </div>
+    </div>
+
     <script>
         'use strict';
+
         // ══════════════════════════════════════════════════════════
-        // AUDIO
+        // NICK
+        // ══════════════════════════════════════════════════════════
+        let playerNick = localStorage.getItem('blimpz_nick') || 'Piloto';
+        const nickEl = document.getElementById('nick-input');
+        nickEl.value = playerNick;
+        nickEl.addEventListener('input', () => {
+            playerNick = nickEl.value.trim() || 'Piloto';
+            localStorage.setItem('blimpz_nick', playerNick);
+        });
+
+        // ══════════════════════════════════════════════════════════
+        // MULTIPLAYER — PeerJS WebRTC
+        // ══════════════════════════════════════════════════════════
+        const MP = {
+            peer: null,           // our PeerJS peer
+            role: null,           // 'host' or 'client'
+            conns: {},            // peerID → DataConnection (host keeps all; client keeps 1)
+            players: {},          // peerID → { nick, mesh, x, y, rotZ, hp }
+            roomCode: null,
+            isPlaying: false,
+
+            // Send to all (host only)
+            broadcast(data, excludeId) {
+                for (const id in this.conns) {
+                    if (id !== excludeId) try { this.conns[id].send(data); } catch (e) { }
+                }
+            },
+            // Send to host (client only)
+            sendToHost(data) {
+                const ids = Object.keys(this.conns);
+                if (ids.length) try { this.conns[ids[0]].send(data); } catch (e) { }
+            },
+            // Send to everyone including self-relay when host
+            sendState() {
+                if (!this.isPlaying || !player) return;
+                const msg = { type: 'state', x: player.position.x, y: player.position.y, rotZ: player.rotation.z, hp };
+                if (this.role === 'host') this.broadcast(msg);
+                else this.sendToHost(msg);
+            },
+            // Handle incoming message
+            onMsg(fromId, data) {
+                if (data.type === 'state') {
+                    // Update remote player mesh
+                    if (!this.players[fromId]) this._addRemotePlayer(fromId, this.players[fromId]?.nick || fromId);
+                    const p = this.players[fromId];
+                    if (p && p.mesh) {
+                        p.mesh.position.x = THREE.MathUtils.lerp(p.mesh.position.x, data.x, 0.35);
+                        p.mesh.position.y = THREE.MathUtils.lerp(p.mesh.position.y, data.y, 0.35);
+                        p.mesh.rotation.z = THREE.MathUtils.lerp(p.mesh.rotation.z, data.rotZ, 0.25);
+                        p.hp = data.hp;
+                    }
+                    // Host relays to other clients
+                    if (this.role === 'host') this.broadcast(data, fromId);
+                } else if (data.type === 'join_info') {
+                    // Client receives host's player list
+                    this._updateJoinPlayerList(data.players);
+                } else if (data.type === 'start') {
+                    // Host says game starts
+                    closeMP();
+                    startGame();
+                    this.isPlaying = true;
+                    notify('🌐 Partida multiplayer iniciada!', 'blue');
+                } else if (data.type === 'nick') {
+                    if (this.players[fromId]) this.players[fromId].nick = data.nick;
+                }
+            },
+            _addRemotePlayer(id, nick) {
+                if (this.players[id]?.mesh) return;
+                const remoteCfg = {
+                    shape: 'classic', fins: 'standard', gondola: 'box', gun: 'single', emblem: 'none',
+                    colors: { env: '#3366ff', gon: '#223355', fin: '#1133aa', prop: '#aaaacc', nose: '#224488', stripe: '#88aaff', gondola2: '#112244', trim: '#aaddff' }
+                };
+                const mesh = buildBlimp(remoteCfg);
+                mesh.position.set(8, 0, 0);
+                scene.add(mesh);
+                if (!this.players[id]) this.players[id] = {};
+                this.players[id].mesh = mesh;
+                this.players[id].nick = nick || id;
+            },
+            _removeRemotePlayer(id) {
+                if (this.players[id]?.mesh) { scene.remove(this.players[id].mesh); }
+                delete this.players[id];
+            },
+            _updateJoinPlayerList(list) {
+                const el = document.getElementById('mp-join-player-list');
+                if (el) el.innerHTML = list.map(n => `<div class="mp-player-item">🎈 ${n}</div>`).join('') || '—';
+            },
+            reset() {
+                for (const id in this.players) this._removeRemotePlayer(id);
+                if (this.peer) { try { this.peer.destroy(); } catch (e) { } this.peer = null; }
+                this.conns = {}; this.players = {}; this.role = null; this.roomCode = null; this.isPlaying = false;
+            }
+        };
+
+        // ── Sync loop: send state 20 times/sec ──
+        setInterval(() => { if (MP.isPlaying && (MP.role === 'host' || Object.keys(MP.conns).length)) MP.sendState(); }, 50);
+
+        // ── HOST ──
+        function genRoomCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = 'BZ-';
+            for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+            return code;
+        }
+
+        function mpHost(serverName) {
+            const status = document.getElementById('mp-host-status');
+            status.textContent = 'Conectando...'; status.className = 'mp-status';
+            MP.reset();
+            MP.role = 'host';
+            const shortCode = genRoomCode();
+            MP.peer = new Peer(shortCode);
+            MP.peer.on('open', id => {
+                MP.roomCode = id;
+                document.getElementById('mp-room-code').textContent = id;
+                document.getElementById('mp-host-setup').style.display = 'none';
+                document.getElementById('mp-host-waiting').style.display = 'block';
+                document.getElementById('mp-host-self').textContent = '👑 ' + playerNick + ' (você, host)';
+                status.textContent = 'Sala criada! Aguardando jogadores...';
+                status.className = 'mp-status ok';
+                MP.players['_host'] = { nick: playerNick };
+            });
+            MP.peer.on('connection', conn => {
+                MP.conns[conn.peer] = conn;
+                let connNick = conn.peer;
+                conn.on('data', data => {
+                    if (data.type === 'nick') {
+                        connNick = data.nick;
+                        MP.players[conn.peer] = { nick: connNick };
+                        _updateHostPlayerList();
+                        // Send updated list to all
+                        const list = Object.values(MP.players).map(p => p.nick);
+                        MP.broadcast({ type: 'join_info', players: list });
+                    } else {
+                        MP.onMsg(conn.peer, data);
+                    }
+                });
+                conn.on('close', () => {
+                    delete MP.conns[conn.peer];
+                    MP._removeRemotePlayer(conn.peer);
+                    delete MP.players[conn.peer];
+                    _updateHostPlayerList();
+                });
+                conn.on('open', () => {
+                    // Send current players
+                    const list = Object.values(MP.players).map(p => p.nick);
+                    conn.send({ type: 'join_info', players: list });
+                });
+            });
+            MP.peer.on('error', err => {
+                status.textContent = 'Erro: ' + err.type; status.className = 'mp-status err';
+            });
+        }
+
+        function _updateHostPlayerList() {
+            const el = document.getElementById('mp-player-list');
+            const items = ['<div class="mp-player-item">👑 ' + playerNick + ' (você)</div>'];
+            for (const id in MP.players) {
+                if (id === '_host') continue;
+                items.push('<div class="mp-player-item">🎈 ' + MP.players[id].nick + '</div>');
+            }
+            el.innerHTML = items.join('');
+        }
+
+        // ── JOIN ──
+        function mpJoin(code) {
+            const status = document.getElementById('mp-join-status');
+            status.textContent = 'Conectando...'; status.className = 'mp-status';
+            MP.reset();
+            MP.role = 'client';
+            MP.peer = new Peer();
+            MP.peer.on('open', myId => {
+                const conn = MP.peer.connect(code.toUpperCase(), { reliable: false });
+                MP.conns[code] = conn;
+                conn.on('open', () => {
+                    conn.send({ type: 'nick', nick: playerNick });
+                    status.textContent = 'Conectado! Aguardando host...'; status.className = 'mp-status ok';
+                    document.getElementById('mp-join-setup').style.display = 'none';
+                    document.getElementById('mp-join-lobby').style.display = 'block';
+                });
+                conn.on('data', data => MP.onMsg(code, data));
+                conn.on('close', () => {
+                    status.textContent = 'Desconectado.'; status.className = 'mp-status err';
+                });
+                conn.on('error', err => {
+                    status.textContent = 'Erro de conexão.'; status.className = 'mp-status err';
+                });
+            });
+            MP.peer.on('error', err => {
+                status.textContent = 'Não foi possível conectar.'; status.className = 'mp-status err';
+            });
+        }
+
+        // ── MP UI ──
+        function openMP() { document.getElementById('mp-modal').classList.add('open'); }
+        function closeMP() { document.getElementById('mp-modal').classList.remove('open'); }
+
+        document.getElementById('btn-mp').addEventListener('click', openMP);
+        document.getElementById('mp-close').addEventListener('click', () => {
+            closeMP();
+            // Reset if not in a game
+            if (!MP.isPlaying) MP.reset();
+        });
+
+        document.getElementById('mp-tab-host').addEventListener('click', () => {
+            document.getElementById('mp-tab-host').classList.add('active');
+            document.getElementById('mp-tab-join').classList.remove('active');
+            document.getElementById('mp-host-section').classList.add('open');
+            document.getElementById('mp-join-section').classList.remove('open');
+        });
+        document.getElementById('mp-tab-join').addEventListener('click', () => {
+            document.getElementById('mp-tab-join').classList.add('active');
+            document.getElementById('mp-tab-host').classList.remove('active');
+            document.getElementById('mp-join-section').classList.add('open');
+            document.getElementById('mp-host-section').classList.remove('open');
+        });
+
+        document.getElementById('mp-host-btn').addEventListener('click', () => {
+            const name = document.getElementById('mp-server-name').value.trim() || 'Servidor';
+            mpHost(name);
+        });
+
+        document.getElementById('mp-join-btn').addEventListener('click', () => {
+            const code = document.getElementById('mp-join-code').value.trim();
+            if (!code) return;
+            mpJoin(code);
+        });
+
+        document.getElementById('mp-room-code').addEventListener('click', () => {
+            const code = document.getElementById('mp-room-code').textContent;
+            navigator.clipboard.writeText(code).then(() => notify('📋 Código copiado!', 'blue')).catch(() => { });
+        });
+
+        document.getElementById('mp-start-btn').addEventListener('click', () => {
+            // Host starts game and notifies all clients
+            MP.broadcast({ type: 'start' });
+            closeMP();
+            startGame();
+            MP.isPlaying = true;
+            notify('🌐 Partida multiplayer iniciada!', 'blue');
+        });
+
+
         // ══════════════════════════════════════════════════════════
         let audioCtx = null;
         const ac = () => { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; };
@@ -1607,7 +2299,7 @@
                 orbit.lastX = e.clientX;
                 orbit.lastY = e.clientY;
                 orbit.targetTheta -= dx * 0.007;
-                orbit.targetPhi   = Math.max(0.05, Math.min(1.1, orbit.targetPhi + dy * 0.005));
+                orbit.targetPhi = Math.max(0.05, Math.min(1.1, orbit.targetPhi + dy * 0.005));
             });
             window.addEventListener('mouseup', () => { orbit.active = false; });
             // scroll to zoom
@@ -1630,7 +2322,7 @@
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
                 orbit.targetTheta -= dx * 0.007;
-                orbit.targetPhi   = Math.max(0.05, Math.min(1.1, orbit.targetPhi + dy * 0.005));
+                orbit.targetPhi = Math.max(0.05, Math.min(1.1, orbit.targetPhi + dy * 0.005));
             }, { passive: true });
         }
 
@@ -1911,9 +2603,10 @@
             clearEntities();
             buildPreview();
             orbit.theta = 0.55; orbit.targetTheta = 0.55;
-            orbit.phi = 0.28;   orbit.targetPhi   = 0.28;
+            orbit.phi = 0.28; orbit.targetPhi = 0.28;
             orbit.radius = 26;
             state = S.MENU;
+            MP.isPlaying = false;
         }
         function clearEntities() {
             [...bullets, ...eBullets].forEach(b => scene.remove(b.mesh));
@@ -1922,6 +2615,10 @@
             particles.forEach(p => scene.remove(p.mesh));
             powerups.forEach(p => scene.remove(p));
             bullets = []; eBullets = []; enemies = []; clouds = []; particles = []; powerups = [];
+            // Remove remote player meshes but keep connections
+            for (const id in MP.players) {
+                if (MP.players[id].mesh) { scene.remove(MP.players[id].mesh); MP.players[id].mesh = null; }
+            }
             // keep scenery, just reset positions for scrollable non-ground items
             scenery.forEach(s => {
                 if (s.userData.isGround) return;
@@ -2091,7 +2788,7 @@
                 if (!orbit.active) orbit.targetTheta += 0.18 * dt;
                 // Smooth interpolation toward target angles
                 orbit.theta += (orbit.targetTheta - orbit.theta) * 0.1;
-                orbit.phi   += (orbit.targetPhi   - orbit.phi)   * 0.1;
+                orbit.phi += (orbit.targetPhi - orbit.phi) * 0.1;
                 // Spherical coords → cartesian, orbiting around previewShip
                 const target = previewShip.position;
                 const r = orbit.radius;
@@ -2170,6 +2867,16 @@
             updateParticles(dt);
             updateScenery(dt, true);
             updateHUD();
+            // Animate remote player props
+            for (const id in MP.players) {
+                const rp = MP.players[id];
+                if (rp.mesh) {
+                    const prop = rp.mesh.getObjectByName('prop');
+                    if (prop) prop.rotation.z += 12 * dt;
+                    // Bob
+                    rp.mesh.position.y += Math.sin(Date.now() * .0009 + rp.mesh.id) * .025;
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════
