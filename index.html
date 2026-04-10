@@ -1394,6 +1394,74 @@
                 transform: translateY(-2px);
                 box-shadow: 0 8px 32px rgba(10,180,90,.55);
             }
+
+        /* ───── GLOSSOWS AERO BUTTON ───── */
+        #menu-footer {
+            padding: 10px 16px 14px;
+            text-align: center;
+        }
+
+        .frutiger-aero-button {
+            --hue: 180;
+            --sat: 0.32;
+            --glow-intensity: 0.75;
+            --fg: oklch(15% calc(var(--sat) * 0.5) var(--hue));
+            --bg: oklch(75% var(--sat) var(--hue) / 0.8);
+            --bg-dark: oklch(45% var(--sat) var(--hue) / 0.75);
+            --bottom-glow: radial-gradient(
+                farthest-corner at bottom center,
+                rgba(255, 255, 255, var(--glow-intensity)),
+                transparent
+            );
+            background-color: var(--bg);
+            background:
+                var(--bottom-glow),
+                linear-gradient(to bottom, var(--bg-dark), var(--bg));
+            border: 1px solid var(--bg);
+            border-radius: 9999px;
+            box-shadow: 0 4px 4px rgba(0, 0, 0, 0.4);
+            color: var(--fg);
+            font-family: "Lucida Grande", "Lucida Sans Unicode", "Segoe UI", system-ui, sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            text-shadow: 0 2px 0.5em rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            position: relative;
+            transition: all 300ms ease;
+            user-select: none;
+            -webkit-user-select: none;
+            padding: 8px 18px;
+            display: inline-block;
+            text-decoration: none;
+        }
+
+        .frutiger-aero-button::after {
+            content: "";
+            position: absolute;
+            top: 4%;
+            left: 0.75em;
+            width: calc(100% - 1.5em);
+            height: 40%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0.8),
+                rgba(255, 255, 255, 0.1)
+            );
+            border-radius: inherit;
+            transition: background 400ms ease;
+            pointer-events: none;
+        }
+
+        .frutiger-aero-button:hover,
+        .frutiger-aero-button:focus {
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+            transform: translateY(-1px);
+        }
+
+        .frutiger-aero-button:active {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+            transform: translateY(1px);
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -1560,6 +1628,11 @@
                     <button class="btn-launch" id="btn-start" style="margin-top:16px;">✈ DECOLAR!</button>
                     <button class="btn-mp" id="btn-mp">🌐 MULTIPLAYER</button>
                 </div><!-- /.mbody -->
+                <div id="menu-footer">
+                    <a href="https://renanstudios.github.io/glossows-xp/" target="_blank" rel="noopener" class="frutiger-aero-button">
+                        ✨ Veja meu outro projeto: Glossows XP
+                    </a>
+                </div>
             </div><!-- /.panel -->
         </div><!-- /.win7-window / #menu -->
     </div><!-- /#ui -->
@@ -1737,13 +1810,6 @@
                 else this.sendToHost(msg);
             },
 
-            sendShipConfig() {
-                if (!this.isPlaying) return;
-                const msg = { type: 'shipconfig', pid: this.myId, cfg: ship };
-                if (this.role === 'host') this.broadcast(msg);
-                else this.sendToHost(msg);
-            },
-
             onMsg(fromConnId, data) {
                 switch (data.type) {
                     case 'state': {
@@ -1811,44 +1877,6 @@
                             updateHUD();
                         }
                         break;
-
-                    case 'pbullet':
-                        // bullet de jogador — host relay para todos; todos criam mesh visual
-                        if (this.role === 'host') {
-                            // cria mesh no host para renderização e colisão
-                            const bm = new THREE.Mesh(bulletGeo,
-                                new THREE.MeshBasicMaterial({ color: data.col || 0xffff44 }));
-                            bm.position.set(data.x, data.y, data.z);
-                            scene.add(bm);
-                            clientBullets.push({ bid: data.bid, mesh: bm, speed: 110,
-                                dx: data.dx || 0, isInferno: data.isInferno,
-                                col: data.col, pid: fromConnId });
-                            // relay para clientes (incluindo o remetente verá via snapshot)
-                            this.broadcast(data, fromConnId);
-                        } else {
-                            // cliente: cria mesh visual do bullet de outro jogador
-                            const bm = new THREE.Mesh(bulletGeo,
-                                new THREE.MeshBasicMaterial({ color: data.col || 0xffff44 }));
-                            bm.position.set(data.x, data.y, data.z);
-                            scene.add(bm);
-                            remoteBullets.push({ bid: data.bid, mesh: bm, dx: data.dx || 0 });
-                        }
-                        break;
-
-                    case 'shipconfig':
-                        // jogador envia sua configuração de navio para os outros renderizarem corretamente
-                        remoteShipConfigs[data.pid] = data.cfg;
-                        // reconstrói o mesh do remoto com as cores certas se já existir
-                        if (this.remotes[data.pid] && this.remotes[data.pid].mesh) {
-                            scene.remove(this.remotes[data.pid].mesh);
-                            this.remotes[data.pid].mesh = null;
-                        }
-                        if (this.isPlaying && this.remotes[data.pid]) {
-                            this.remotes[data.pid].mesh = null; // força recriação
-                            this._ensureRemote(data.pid, this.remotes[data.pid].nick);
-                        }
-                        if (this.role === 'host') this.broadcast(data, fromConnId);
-                        break;
                 }
             },
 
@@ -1858,19 +1886,16 @@
                 if (!this.remotes[pid]) this.remotes[pid] = { nick: nick || pid, mesh: null, dead: false };
                 const r = this.remotes[pid];
                 if (!r.mesh && !r.dead) {
-                    // Usa a config de navio real do jogador se já recebida; senão usa placeholder azul
                     const idx = Object.keys(this.remotes).indexOf(pid);
-                    const cfg = remoteShipConfigs[pid] || (() => {
-                        const hue = (idx * 0.37 + 0.58) % 1;
-                        const col = new THREE.Color().setHSL(hue, 0.8, 0.45);
-                        return {
-                            shape: 'classic', fins: 'standard', gondola: 'box', gun: 'single', emblem: 'none',
-                            colors: {
-                                env: '#' + col.getHexString(), gon: '#1a2a55', fin: '#0d1f66',
-                                prop: '#aaaacc', nose: '#1a3377', stripe: '#88aaff', gondola2: '#0d1a44', trim: '#aaddff'
-                            }
-                        };
-                    })();
+                    const hue = (idx * 0.37 + 0.58) % 1;
+                    const col = new THREE.Color().setHSL(hue, 0.8, 0.45);
+                    const cfg = {
+                        shape: 'classic', fins: 'standard', gondola: 'box', gun: 'single', emblem: 'none',
+                        colors: {
+                            env: '#' + col.getHexString(), gon: '#1a2a55', fin: '#0d1f66',
+                            prop: '#aaaacc', nose: '#1a3377', stripe: '#88aaff', gondola2: '#0d1a44', trim: '#aaddff'
+                        }
+                    };
                     const mesh = buildBlimp(cfg);
                     mesh.position.set(8 + idx * 5, 0, 0);
                     scene.add(mesh);
@@ -1962,18 +1987,7 @@
                     +b.mesh.position.z.toFixed(2),
                     b.speed, b.dmg
                 ]);
-                // bullets de todos os jogadores (host local + clientes)
-                const allBuls = [
-                    // bullets do host local (bullets[])
-                    ...bullets.map(b => [b.bid || 0, +b.mesh.position.x.toFixed(2),
-                        +b.mesh.position.y.toFixed(2), +b.mesh.position.z.toFixed(2),
-                        b.dx || 0, b.col || 0xffff44]),
-                    // bullets de clientes recebidos
-                    ...clientBullets.filter(b => !b.isHost).map(b => [b.bid, +b.mesh.position.x.toFixed(2),
-                        +b.mesh.position.y.toFixed(2), +b.mesh.position.z.toFixed(2),
-                        b.dx || 0, b.col || 0xffff44])
-                ];
-                this.broadcast({ type: 'world', enemies: snap, eBullets: ebs, pbullets: allBuls });
+                this.broadcast({ type: 'world', enemies: snap, eBullets: ebs });
             },
 
             applyWorldSnapshot(data) {
@@ -2033,29 +2047,6 @@
                             new THREE.MeshBasicMaterial({ color: 0xff4444 }));
                         m.position.set(x, y, z); scene.add(m);
                         eBullets.push({ bid, mesh: m, speed: spd, dmg });
-                    }
-                }
-
-                // ── bullets dos jogadores (snapshot) ──
-                const pbuls = data.pbullets || [];
-                const pbulIds = new Set(pbuls.map(b => b[0]));
-                for (let i = remoteBullets.length - 1; i >= 0; i--) {
-                    if (!pbulIds.has(remoteBullets[i].bid)) {
-                        scene.remove(remoteBullets[i].mesh); remoteBullets.splice(i, 1);
-                    }
-                }
-                const existingPB = {};
-                remoteBullets.forEach(b => existingPB[b.bid] = b);
-                for (const pb of pbuls) {
-                    const [bid, x, y, z, dx, col] = pb;
-                    if (bid === 0) continue; // bullet sem id ainda
-                    if (existingPB[bid]) {
-                        existingPB[bid].mesh.position.set(x, y, z);
-                    } else {
-                        const m = new THREE.Mesh(bulletGeo,
-                            new THREE.MeshBasicMaterial({ color: col || 0xffff44 }));
-                        m.position.set(x, y, z); scene.add(m);
-                        remoteBullets.push({ bid, mesh: m, dx: dx || 0 });
                     }
                 }
             }
@@ -2897,8 +2888,7 @@
         function startGame() {
             state = S.PLAYING;
             score = kills = shotsFired = shotsHit = 0;
-            _eidCounter = 0; _bidCounter = 0; _plBidCounter = 0;
-            remoteBullets = []; clientBullets = [];
+            _eidCounter = 0; _bidCounter = 0;
             hp = maxHp = 100 + (getShipStats().armor > 1 ? 20 : 0);
             wave = 1; waveTimer = 0; waveDuration = 22; bossSpawned = false;
             pwRapid = pwShield = pwSpread = pwInferno = 0;
@@ -2919,11 +2909,7 @@
             scene.remove(previewShip); clearEntities();
             player = buildBlimp(ship); player.position.set(0, 0, 0); scene.add(player);
             // Spawn remote player meshes if multiplayer
-            if (MP.isPlaying) {
-                MP.spawnAllRemotes();
-                // Envia a configuração do nosso navio para os outros jogadores
-                setTimeout(() => MP.sendShipConfig(), 200);
-            }
+            if (MP.isPlaying) MP.spawnAllRemotes();
             camera.position.set(0, 6, 28); camera.lookAt(0, 0, -100);
             showWave('ONDA 1'); notify('Boa sorte, piloto! ✈', 'blue');
             updateHUD();
@@ -3208,13 +3194,12 @@
             MP.reset();
         });
         function clearEntities() {
-            [...bullets, ...eBullets, ...remoteBullets, ...clientBullets].forEach(b => scene.remove(b.mesh));
+            [...bullets, ...eBullets].forEach(b => scene.remove(b.mesh));
             enemies.forEach(e => scene.remove(e));
             clouds.forEach(c => scene.remove(c));
             particles.forEach(p => scene.remove(p.mesh));
             powerups.forEach(p => scene.remove(p));
             bullets = []; eBullets = []; enemies = []; clouds = []; particles = []; powerups = [];
-            remoteBullets = []; clientBullets = [];
             // Clear nick canvas
             if (nickCtx) nickCtx.clearRect(0, 0, nickCanvas.width, nickCanvas.height);
             // Remove remote player meshes but keep connections; reset dead for restart
@@ -3233,14 +3218,6 @@
         // ══════════════════════════════════════════════════════════
         // SHOOTING
         // ══════════════════════════════════════════════════════════
-
-        // bullets sincronizados em MP
-        let _plBidCounter = 0;          // ID único para bullets de jogadores
-        let remoteBullets = [];         // bullets remotos renderizados no cliente
-        let clientBullets  = [];        // bullets de clientes gerenciados pelo host
-        // mapa pid → shipConfig para renderizar o dirigível correto de cada remoto
-        let remoteShipConfigs = {};
-
         const bulletMats = {
             normal: new THREE.MeshBasicMaterial({ color: 0xffff44 }),
             rapid: new THREE.MeshBasicMaterial({ color: 0xff8800 }),
@@ -3257,29 +3234,10 @@
             if (spread) sfxSpread(); else sfxShoot();
             const angles = spread ? [-0.16, 0, 0.16] : [0];
             const bMat = pwInferno > 0 ? bulletMats.inferno : pwRapid > 0 ? bulletMats.rapid : bulletMats.normal;
-            const colHex = pwInferno > 0 ? 0xff3300 : pwRapid > 0 ? 0xff8800 : 0xffff44;
             angles.forEach(ang => {
-                const dx = Math.sin(ang) * 42;
-                const bid = ++_plBidCounter;
                 const m = new THREE.Mesh(bulletGeo, bMat);
                 m.position.copy(player.position); m.position.z -= 8; m.position.y -= 1;
-                scene.add(m);
-                const bObj = { bid, mesh: m, speed: 110, dx, isInferno: pwInferno > 0, col: colHex };
-                bullets.push(bObj);
-
-                if (MP.isPlaying) {
-                    const msg = { type: 'pbullet', bid,
-                        x: +m.position.x.toFixed(2), y: +m.position.y.toFixed(2), z: +m.position.z.toFixed(2),
-                        dx: +dx.toFixed(3), col: colHex, isInferno: pwInferno > 0 };
-                    if (MP.role === 'host') {
-                        // host adiciona o próprio bullet à lista compartilhada
-                        clientBullets.push({ ...bObj, pid: MP.myId, isHost: true });
-                        MP.broadcast(msg);           // broadcast imediato para clientes verem
-                    } else {
-                        MP.sendToHost(msg);          // cliente envia ao host para relay
-                        MP.broadcast && null;        // não tem broadcast no cliente
-                    }
-                }
+                scene.add(m); bullets.push({ mesh: m, speed: 110, dx: Math.sin(ang) * 42, isInferno: pwInferno > 0 });
             });
         }
 
@@ -3603,79 +3561,61 @@
         // ══════════════════════════════════════════════════════════
         // UPDATE FUNCTIONS
         // ══════════════════════════════════════════════════════════
-        function _resolveHit(en, b, arr, i) {
-            // Remove bullet do array (se passado) e aplica dano ao inimigo
-            if (arr && i >= 0) { scene.remove(b.mesh); arr.splice(i, 1); }
-            en.userData.health--;
-            if (b.isInferno) createExplosion(b.mesh ? b.mesh.position : en.position, 0xff4400, 8);
-            // hit flash
-            en.children.forEach(c => { if (c.material?.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
-            if (en.userData.health <= 0) {
-                const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
-                createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
-                sfxExplode(en.userData.isBoss ? 2.5 : 1);
-                scene.remove(en);
-                const eidx = enemies.indexOf(en); if (eidx >= 0) enemies.splice(eidx, 1);
-                const pts = en.userData.isBoss ? 600 : 10 * wave;
-                score += pts; kills++;
-                notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + '+' + pts + ' pts', en.userData.isBoss ? 'gold' : 'green');
-                if (Math.random() < (en.userData.isBoss ? 1 : .3)) spawnPowerup(en.position);
-                return true;
-            }
-            return false;
-        }
-
         function updateBullets(dt) {
-            // ── bullets do jogador local ──
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
                 b.mesh.position.z -= b.speed * dt;
                 if (b.dx) b.mesh.position.x += b.dx * dt;
                 if (b.mesh.position.z < -480) { scene.remove(b.mesh); bullets.splice(i, 1); continue; }
 
+                let hit = false;
+
+                // Só o host (ou SP) resolve colisão com inimigos
                 if (!MP.isPlaying || MP.role === 'host') {
-                    // SP ou host: resolve colisão
-                    let hit = false;
                     for (let j = enemies.length - 1; j >= 0; j--) {
-                        if (b.mesh.position.distanceTo(enemies[j].position) < enemies[j].userData.radius + 2) {
-                            shotsHit++;
-                            _resolveHit(enemies[j], b, bullets, i);
-                            hit = true; break;
+                        const en = enemies[j];
+                        if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 2) {
+                            hit = true; shotsHit++;
+                            scene.remove(b.mesh); bullets.splice(i, 1);
+                            en.userData.health--;
+                            if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
+                            if (en.userData.health <= 0) {
+                                const col = en.children[0]?.material?.color?.getHex() || 0xff4400;
+                                createExplosion(en.position, col, en.userData.isBoss ? 90 : 22);
+                                sfxExplode(en.userData.isBoss ? 2.5 : 1);
+                                scene.remove(en); enemies.splice(j, 1);
+                                const pts = en.userData.isBoss ? 600 : 10 * wave;
+                                score += pts; kills++;
+                                notify((en.userData.isBoss ? '🏆 CHEFE DESTRUÍDO! ' : '') + ('+' + pts + ' pts'), en.userData.isBoss ? 'gold' : 'green');
+                                if (Math.random() < (en.userData.isBoss ? 1 : .3)) spawnPowerup(en.position);
+                            } else {
+                                en.children.forEach(c => { if (c.material && c.material.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
+                            }
+                            break;
                         }
                     }
-                    if (hit) continue;
-                }
-                // cliente: bullet já avisou host via 'pbullet'; só move localmente
-            }
-
-            // ── clientBullets: bullets de clientes (gerenciados pelo host) ──
-            if (MP.isPlaying && MP.role === 'host') {
-                for (let i = clientBullets.length - 1; i >= 0; i--) {
-                    const b = clientBullets[i];
-                    if (b.isHost) { clientBullets.splice(i, 1); continue; } // host bullets já estão em bullets[]
-                    b.mesh.position.z -= b.speed * dt;
-                    if (b.dx) b.mesh.position.x += b.dx * dt;
-                    if (b.mesh.position.z < -480) { scene.remove(b.mesh); clientBullets.splice(i, 1); continue; }
-                    let hit = false;
+                } else {
+                    // Cliente: checa colisão local para feedback visual imediato,
+                    // mas também envia ao host para autoridade
                     for (let j = enemies.length - 1; j >= 0; j--) {
-                        if (b.mesh.position.distanceTo(enemies[j].position) < enemies[j].userData.radius + 3) {
-                            _resolveHit(enemies[j], b, clientBullets, i);
-                            hit = true; break;
+                        const en = enemies[j];
+                        if (b.mesh.position.distanceTo(en.position) < en.userData.radius + 4) {
+                            hit = true; shotsHit++;
+                            scene.remove(b.mesh); bullets.splice(i, 1);
+                            if (b.isInferno) createExplosion(b.mesh.position, 0xff4400, 8);
+                            // flash local
+                            en.children.forEach(c => { if (c.material && c.material.color) { const oc = c.material.color.clone(); c.material.color.set(0xffffff); setTimeout(() => c.material.color.copy(oc), 90); } });
+                            // Notifica host
+                            MP.sendToHost({
+                                type: 'shoot',
+                                x: b.mesh.position.x, y: b.mesh.position.y, z: b.mesh.position.z,
+                                dx: b.dx || 0, isInferno: b.isInferno
+                            });
+                            break;
                         }
                     }
-                    if (hit) continue;
                 }
-            }
-
-            // ── remoteBullets: bullets remotos (visual no cliente) ──
-            if (MP.isPlaying && MP.role !== 'host') {
-                // Posição já atualizada pelo snapshot — apenas move como fallback local
-                for (let i = remoteBullets.length - 1; i >= 0; i--) {
-                    const b = remoteBullets[i];
-                    b.mesh.position.z -= 110 * dt;
-                    if (b.dx) b.mesh.position.x += b.dx * dt;
-                    if (b.mesh.position.z < -480) { scene.remove(b.mesh); remoteBullets.splice(i, 1); }
-                }
+                if (hit) continue;
             }
         }
 
