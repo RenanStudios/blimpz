@@ -1426,171 +1426,11 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
             transform: translateY(1px);
         }
-
-        /* ───── JOYSTICK DINÂMICO ───── */
-        #joystick-zone {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 200px;
-            height: 200px;
-            z-index: 10;
-            display: none;
-            touch-action: none;
-        }
-        #joystick-base {
-            position: absolute;
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            background: rgba(8,14,38,.55);
-            border: 2px solid rgba(100,150,255,.35);
-            transform: translate(-50%,-50%);
-            pointer-events: none;
-        }
-        #joystick-knob {
-            position: absolute;
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 35%, rgba(160,200,255,.9), rgba(30,80,200,.75));
-            border: 2px solid rgba(100,160,255,.6);
-            box-shadow: 0 0 14px rgba(60,120,255,.4);
-            transform: translate(-50%,-50%);
-            pointer-events: none;
-        }
-
-        /* ══════════════════════════════════════════════════
-           MOBILE — LANDSCAPE (modo principal de jogo)
-           Ativa em telas com altura ≤ 520px em landscape,
-           ou largura ≤ 900px em landscape (celulares em geral)
-           ══════════════════════════════════════════════════ */
-        @media (orientation: landscape) and (max-width: 1024px) {
-            /* Menu: janela compacta no lado esquerdo, scrollável */
-            #ui {
-                align-items: flex-start;
-                justify-content: flex-start;
-                padding: 6px 0 6px 8px;
-                overflow-y: auto;
-                max-height: 100vh;
-            }
-            #menu { width: min(340px, 52vw); }
-            .mhdr { padding: 8px 14px 6px; }
-            .mtitle { font-size: 28px; letter-spacing: 2px; }
-            .msub { font-size: 9px; margin-top: 2px; }
-            .mbody { padding: 8px 12px 10px; }
-            .menu-tabs { margin-bottom: 10px; gap: 4px; }
-            .mtab { font-size: 10px; padding: 6px 4px; }
-            .ws-scroll { max-height: calc(100vh - 220px); }
-            .ws-section { margin-bottom: 10px; }
-            .ws-label { font-size: 9px; margin-bottom: 6px; }
-            .colgrid { gap: 4px; }
-            .citem input[type=color] { width: 30px !important; height: 30px !important; }
-            .citem { font-size: 9px; gap: 3px; }
-            .parts-row { gap: 5px; }
-            .part-btn { font-size: 10px; padding: 5px 8px; }
-            .stat-preview { gap: 4px; margin-bottom: 8px; }
-            .sp-name { font-size: 8px; }
-            .nick-row { padding: 6px 10px 2px; }
-            .nick-lbl { font-size: 9px; }
-            .nick-input { font-size: 12px; padding: 5px 8px; }
-            .btn-launch { font-size: 16px !important; padding: 10px !important; margin-top: 8px; }
-            .btn-mp { font-size: 14px; padding: 8px; margin-top: 6px; }
-            #menu-footer { padding: 6px 12px 8px; }
-            .frutiger-aero-button { font-size: 10px; padding: 5px 12px; }
-
-            /* Game over SP */
-            #gowindow-wrapper { align-items: center; justify-content: center; overflow-y: auto; }
-            #gowindow .panel { width: min(360px, 60vw) !important; padding: 14px 18px 18px !important; }
-            .gotitle { font-size: 32px; }
-            .gosub { font-size: 11px; margin-bottom: 12px; }
-            .gostats { padding: 10px; gap: 8px; margin-bottom: 12px; }
-            .sv { font-size: 22px; }
-            .sl { font-size: 8px; }
-            .btn-go { font-size: 15px !important; padding: 10px !important; }
-
-            /* Game over MP */
-            #gowindow-wrapper-mp { align-items: center; justify-content: center; overflow-y: auto; }
-            #mp-gowindow .panel { width: min(360px, 60vw) !important; padding: 14px 18px 18px !important; }
-
-            /* Modal multiplayer */
-            #mp-modal { align-items: center; overflow-y: auto; }
-            .mp-panel { width: min(380px, 70vw) !important; padding: 16px 18px 18px; max-height: 96vh; overflow-y: auto; }
-            .mp-title { font-size: 17px; margin-bottom: 12px; }
-            .mp-tab-btn { font-size: 11px; padding: 8px 4px; }
-            .mp-lbl { font-size: 9px; }
-            .mp-input { font-size: 12px; padding: 7px 10px; margin-bottom: 7px; }
-            .mp-info { font-size: 11px; padding: 8px 10px; }
-            .mp-code { font-size: 15px; }
-            .mp-status { font-size: 11px; }
-        }
-
-        /* ══════════════════════════════════════════════════
-           MOBILE — PORTRAIT (fallback / acidente)
-           Avisa o jogador para virar o celular, e ainda
-           deixa os menus funcionais caso ele insista
-           ══════════════════════════════════════════════════ */
-        @media (orientation: portrait) and (max-width: 768px) {
-            /* Faixa de aviso "vire o celular" durante o jogo */
-            #rotate-hint {
-                display: flex !important;
-            }
-
-            /* Menu: ocupa toda a largura, scrollável */
-            #ui {
-                align-items: flex-start;
-                justify-content: center;
-                padding: 0;
-                overflow-y: auto;
-                max-height: 100vh;
-            }
-            #menu { width: 100vw; max-width: 100vw; }
-            #menu .win7-window { border-radius: 0; width: 100vw; }
-            .mhdr { padding: 12px 16px 8px; }
-            .mtitle { font-size: 36px; letter-spacing: 3px; }
-            .mbody { padding: 10px 14px 14px; }
-            .ws-scroll { max-height: 38vh; }
-            .btn-launch { font-size: 18px !important; padding: 12px !important; }
-            .btn-mp { font-size: 15px; padding: 9px; }
-
-            /* Game over SP */
-            #gowindow-wrapper { align-items: flex-start; padding-top: 8px; overflow-y: auto; }
-            #gowindow .panel { width: 100vw !important; border-radius: 0 !important; padding: 14px 16px 18px !important; }
-            #gowindow .win7-window { border-radius: 0; }
-            .gotitle { font-size: 32px; }
-            .gostats { padding: 10px; }
-            .sv { font-size: 20px; }
-            .btn-go { font-size: 15px !important; padding: 10px !important; }
-
-            /* Game over MP */
-            #gowindow-wrapper-mp { align-items: flex-start; padding-top: 8px; overflow-y: auto; }
-            #mp-gowindow .panel { width: 100vw !important; padding: 14px 16px 18px !important; }
-
-            /* Modal multiplayer */
-            #mp-modal { align-items: flex-start; padding-top: 8px; overflow-y: auto; }
-            .mp-panel { width: 96vw !important; padding: 16px 14px 18px; }
-
-            /* Joystick maior em portrait */
-            #joystick-zone { width: 220px; height: 220px; }
-        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
-    <!-- Aviso de orientação portrait em mobile -->
-    <div id="rotate-hint" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(8,14,38,.92);flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none;">
-        <div style="font-size:52px;animation:rotatePulse 1.8s ease-in-out infinite;">📱</div>
-        <div style="font-family:'Black Han Sans',sans-serif;font-size:22px;color:#FFD700;letter-spacing:2px;">VIRE O CELULAR</div>
-        <div style="font-size:12px;color:rgba(180,200,255,.6);letter-spacing:1px;">O jogo é melhor em modo horizontal</div>
-    </div>
-    <style>
-        @keyframes rotatePulse {
-            0%,100% { transform: rotate(0deg); }
-            40%      { transform: rotate(90deg); }
-            60%      { transform: rotate(90deg); }
-        }
-    </style>
     <canvas id="gc"></canvas>
     <canvas id="nick-canvas"></canvas>
     <div id="dmgflash"></div>
@@ -1826,9 +1666,13 @@
     <div id="notifs"></div>
     <div id="wavebanner"><div class="wtext" id="wave-text"></div></div>
 
-    <div id="joystick-zone">
-        <div id="joystick-base"></div>
-        <div id="joystick-knob"></div>
+    <div id="tctrl">
+        <button class="tbtn" id="t-up">▲</button>
+        <div style="display:flex;gap:8px">
+            <button class="tbtn" id="t-left">◀</button>
+            <button class="tbtn" id="t-down">▼</button>
+            <button class="tbtn" id="t-right">▶</button>
+        </div>
     </div>
     <div id="tfire">🔥</div>
 
@@ -2063,23 +1907,15 @@
                 this._checkAllDead();
             },
 
-            // ── BUGFIX: tela de game over MP não aparecia quando todos morrem ──
-            // O problema era que _checkAllDead só verificava remotes mas não levava
-            // em conta que o player local pode morrer DEPOIS de todos os remotos,
-            // ou que o state=GAMEOVER não havia chegado ainda. Agora verificamos
-            // com um pequeno delay para garantir que o estado foi atualizado.
             _checkAllDead() {
+                // Só age depois que a animação de crash terminou
+                if (state !== S.GAMEOVER) return;
                 if (!this.deadSet.has('_me')) return;
-                const rids = Object.keys(this.remotes);
-                // Se não há remotos registrados (partida 1v1 onde host/cliente
-                // se desconectou antes do fim), considera terminado igualmente.
+                // Filtra o próprio ID (localDie adiciona this.myId em remotes)
+                const rids = Object.keys(this.remotes).filter(pid => pid !== this.myId);
                 if (rids.length === 0 || rids.every(pid => this.deadSet.has(pid))) {
-                    // Pequeno delay para garantir que a animação de crash terminou
-                    // e que o state chegou a S.GAMEOVER antes de mostrar o overlay.
-                    setTimeout(() => {
-                        document.getElementById('mp-waiting-overlay').classList.remove('show');
-                        showMPGameOver();
-                    }, 400);
+                    document.getElementById('mp-waiting-overlay').classList.remove('show');
+                    showMPGameOver();
                 }
             },
 
@@ -2678,7 +2514,7 @@
             setupUI();
             setupTouch();
             if ('ontouchstart' in window) {
-                document.getElementById('joystick-zone').style.display = 'block';
+                document.getElementById('tctrl').style.display = 'flex';
                 document.getElementById('tfire').style.display = 'flex';
             }
             requestAnimationFrame(loop);
@@ -2900,7 +2736,7 @@
         // INPUT
         // ══════════════════════════════════════════════════════════
         const keys = {};
-        const joystick = { x: 0, y: 0 }; // vetor normalizado do joystick (-1..1)
+        const touch = { left: false, right: false, up: false, down: false };
 
         function onKD(e) {
             keys[e.key] = true;
@@ -2908,89 +2744,21 @@
             if (e.key === 'Shift' && state === S.PLAYING) e.preventDefault();
         }
         function onKU(e) { keys[e.key] = false; }
-        const iL = () => keys['ArrowLeft'] || keys['a'] || keys['A'] || joystick.x < -0.2;
-        const iR = () => keys['ArrowRight'] || keys['d'] || keys['D'] || joystick.x > 0.2;
-        const iU = () => keys['ArrowUp'] || keys['w'] || keys['W'] || joystick.y > 0.2;
-        const iD = () => keys['ArrowDown'] || keys['s'] || keys['S'] || joystick.y < -0.2;
+        const iL = () => keys['ArrowLeft'] || keys['a'] || keys['A'] || touch.left;
+        const iR = () => keys['ArrowRight'] || keys['d'] || keys['D'] || touch.right;
+        const iU = () => keys['ArrowUp'] || keys['w'] || keys['W'] || touch.up;
+        const iD = () => keys['ArrowDown'] || keys['s'] || keys['S'] || touch.down;
         const iBoost = () => keys['Shift'];
 
         function setupTouch() {
-            const zone  = document.getElementById('joystick-zone');
-            const base  = document.getElementById('joystick-base');
-            const knob  = document.getElementById('joystick-knob');
-            const maxR  = 44;
-
-            let activeTouchId = null; // rastreia APENAS o dedo que iniciou o joystick
-            let originX = 0, originY = 0;
-
-            function updateKnob(cx, cy) {
-                const dx = cx - originX;
-                const dy = cy - originY;
-                const dist = Math.hypot(dx, dy);
-                const clamped = Math.min(dist, maxR);
-                const angle = Math.atan2(dy, dx);
-                knob.style.left = (originX + Math.cos(angle) * clamped) + 'px';
-                knob.style.top  = (originY + Math.sin(angle) * clamped) + 'px';
-                joystick.x =  (Math.cos(angle) * clamped) / maxR;
-                joystick.y = -(Math.sin(angle) * clamped) / maxR;
-            }
-
-            function resetKnob() {
-                activeTouchId = null;
-                joystick.x = 0; joystick.y = 0;
-                knob.style.left = originX + 'px';
-                knob.style.top  = originY + 'px';
-                base.style.left = originX + 'px';
-                base.style.top  = originY + 'px';
-            }
-
-            zone.addEventListener('touchstart', e => {
-                e.preventDefault();
-                // Pega apenas o PRIMEIRO toque novo que ainda não está rastreado
-                for (const t of e.changedTouches) {
-                    if (activeTouchId === null) {
-                        activeTouchId = t.identifier;
-                        const rect = zone.getBoundingClientRect();
-                        originX = t.clientX - rect.left;
-                        originY = t.clientY - rect.top;
-                        base.style.left = originX + 'px';
-                        base.style.top  = originY + 'px';
-                        knob.style.left = originX + 'px';
-                        knob.style.top  = originY + 'px';
-                        break;
-                    }
-                }
-            }, { passive: false });
-
-            zone.addEventListener('touchmove', e => {
-                e.preventDefault();
-                // Atualiza SOMENTE o toque que iniciou o joystick
-                for (const t of e.changedTouches) {
-                    if (t.identifier === activeTouchId) {
-                        const rect = zone.getBoundingClientRect();
-                        updateKnob(t.clientX - rect.left, t.clientY - rect.top);
-                        break;
-                    }
-                }
-            }, { passive: false });
-
-            zone.addEventListener('touchend', e => {
-                for (const t of e.changedTouches) {
-                    if (t.identifier === activeTouchId) { resetKnob(); break; }
-                }
-            }, { passive: false });
-
-            zone.addEventListener('touchcancel', e => {
-                for (const t of e.changedTouches) {
-                    if (t.identifier === activeTouchId) { resetKnob(); break; }
-                }
-            }, { passive: false });
-
-            // Botão de fogo: totalmente independente, não interfere no joystick
+            const map = { ['t-left']: 'left', ['t-right']: 'right', ['t-up']: 'up', ['t-down']: 'down' };
+            Object.entries(map).forEach(([id, dir]) => {
+                const b = document.getElementById(id);
+                b.addEventListener('touchstart', e => { e.preventDefault(); touch[dir] = true; }, { passive: false });
+                b.addEventListener('touchend', e => { e.preventDefault(); touch[dir] = false; }, { passive: false });
+            });
             document.getElementById('tfire').addEventListener('touchstart', e => {
-                e.preventDefault();
-                e.stopPropagation(); // evita que o toque vaze para a joystick-zone
-                if (state === S.PLAYING) shoot();
+                e.preventDefault(); if (state === S.PLAYING) shoot();
             }, { passive: false });
         }
 
@@ -3337,6 +3105,7 @@
             sfxExplode(1.0);
 
             if (MP.isPlaying) {
+                document.getElementById('mp-waiting-overlay').classList.add('show');
                 MP.localDie();
             }
 
@@ -4096,12 +3865,6 @@
         function onResize() {
             camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
             renderer.setSize(innerWidth, innerHeight);
-            // Mostra aviso "vire o celular" em portrait mobile durante o jogo
-            const isMobile = 'ontouchstart' in window;
-            const isPortrait = innerHeight > innerWidth;
-            const isPlaying = state === S.PLAYING || state === S.CRASHING || state === S.GAMEOVER;
-            const hint = document.getElementById('rotate-hint');
-            hint.style.display = (isMobile && isPortrait && isPlaying) ? 'flex' : 'none';
         }
 
         init();
