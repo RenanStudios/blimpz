@@ -2108,8 +2108,7 @@
         </div>
     </div>
 
-    <script>
-        'use strict';
+    <script>'use strict';
 
         // ══════════════════════════════════════════════════════════
         // NICK
@@ -3373,63 +3372,84 @@
             nickCtx.clearRect(0, 0, nickCanvas.width, nickCanvas.height);
 
             if (player) {
-                const screenPos = worldToScreen(player.position.clone().add(new THREE.Vector3(0, 4, 0)));
-                if (!screenPos.behind) drawNickLabel(playerNick, screenPos.x, screenPos.y, '#44FF88');
+                const screenPos = worldToScreen(player.position.clone().add(new THREE.Vector3(0, 6, 0)));
+                if (!screenPos.behind) drawNickLabel(playerNick, screenPos.x, screenPos.y, '#44FF88', hp, maxHp);
             }
 
             for (const id in MP.remotes) {
                 const rp = MP.remotes[id];
                 if (!rp.mesh) continue;
-                const screenPos = worldToScreen(rp.mesh.position.clone().add(new THREE.Vector3(0, 4, 0)));
-                if (!screenPos.behind) drawNickLabel(rp.nick || id, screenPos.x, screenPos.y, '#88aaff');
+                const screenPos = worldToScreen(rp.mesh.position.clone().add(new THREE.Vector3(0, 6, 0)));
+                if (!screenPos.behind) drawNickLabel(rp.nick || id, screenPos.x, screenPos.y, '#88aaff', rp.hp ?? maxHp, maxHp);
             }
         }
 
-        function drawNickLabel(nick, x, y, color) {
+        function drawNickLabel(nick, x, y, color, hpVal, maxHpVal) {
             if (!nickCtx) return;
             nickCtx.font = 'bold 13px Nunito, sans-serif';
             nickCtx.textAlign = 'center';
             nickCtx.textBaseline = 'middle';
-            const w = nickCtx.measureText(nick).width + 18;
-            const h = 22;
-            const rx = x - w / 2, ry = y - h / 2, r = 5;
+
+            const barW = 60, barH = 5, barMargin = 4;
+            const labelH = 22;
+            const totalH = barH + barMargin + labelH;
+            const blockW = Math.max(nickCtx.measureText(nick).width + 18, barW + 50);
+
+            const rx = x - blockW / 2;
+            const barY = y - totalH / 2;
+            const labelY = barY + barH + barMargin;
+            const r = 5;
+
+            // Fundo do bloco inteiro
             nickCtx.fillStyle = 'rgba(8,14,38,0.85)';
             nickCtx.beginPath();
             if (nickCtx.roundRect) {
-                nickCtx.roundRect(rx, ry, w, h, r);
+                nickCtx.roundRect(rx, barY - 3, blockW, totalH + 6, r);
             } else {
-                nickCtx.moveTo(rx + r, ry);
-                nickCtx.lineTo(rx + w - r, ry);
-                nickCtx.quadraticCurveTo(rx + w, ry, rx + w, ry + r);
-                nickCtx.lineTo(rx + w, ry + h - r);
-                nickCtx.quadraticCurveTo(rx + w, ry + h, rx + w - r, ry + h);
-                nickCtx.lineTo(rx + r, ry + h);
-                nickCtx.quadraticCurveTo(rx, ry + h, rx, ry + h - r);
-                nickCtx.lineTo(rx, ry + r);
-                nickCtx.quadraticCurveTo(rx, ry, rx + r, ry);
-                nickCtx.closePath();
+                nickCtx.rect(rx, barY - 3, blockW, totalH + 6);
             }
             nickCtx.fill();
+
+            // Borda
             nickCtx.strokeStyle = color;
             nickCtx.lineWidth = 1.5;
             nickCtx.beginPath();
             if (nickCtx.roundRect) {
-                nickCtx.roundRect(rx, ry, w, h, r);
+                nickCtx.roundRect(rx, barY - 3, blockW, totalH + 6, r);
             } else {
-                nickCtx.moveTo(rx + r, ry);
-                nickCtx.lineTo(rx + w - r, ry);
-                nickCtx.quadraticCurveTo(rx + w, ry, rx + w, ry + r);
-                nickCtx.lineTo(rx + w, ry + h - r);
-                nickCtx.quadraticCurveTo(rx + w, ry + h, rx + w - r, ry + h);
-                nickCtx.lineTo(rx + r, ry + h);
-                nickCtx.quadraticCurveTo(rx, ry + h, rx, ry + h - r);
-                nickCtx.lineTo(rx, ry + r);
-                nickCtx.quadraticCurveTo(rx, ry, rx + r, ry);
-                nickCtx.closePath();
+                nickCtx.rect(rx, barY - 3, blockW, totalH + 6);
             }
             nickCtx.stroke();
+
+            // Barra de vida — fundo
+            const barX = rx + 6;
+            const barActualW = blockW - 56;
+            nickCtx.fillStyle = 'rgba(0,0,0,0.5)';
+            nickCtx.beginPath();
+            if (nickCtx.roundRect) nickCtx.roundRect(barX, barY, barActualW, barH, 2);
+            else nickCtx.rect(barX, barY, barActualW, barH);
+            nickCtx.fill();
+
+            // Barra de vida — preenchimento
+            const pct = maxHpVal > 0 ? Math.max(0, Math.min(1, hpVal / maxHpVal)) : 0;
+            const fillColor = pct > 0.6 ? '#44FF88' : pct > 0.3 ? '#FFDD44' : '#FF5544';
+            nickCtx.fillStyle = fillColor;
+            nickCtx.beginPath();
+            if (nickCtx.roundRect) nickCtx.roundRect(barX, barY, barActualW * pct, barH, 2);
+            else nickCtx.rect(barX, barY, barActualW * pct, barH);
+            nickCtx.fill();
+
+            // HP em número
+            nickCtx.font = 'bold 10px Nunito, sans-serif';
+            nickCtx.fillStyle = fillColor;
+            nickCtx.textAlign = 'right';
+            nickCtx.fillText(Math.ceil(hpVal), rx + blockW - 4, barY + barH / 2 + 1);
+
+            // Nick
+            nickCtx.font = 'bold 13px Nunito, sans-serif';
+            nickCtx.textAlign = 'center';
             nickCtx.fillStyle = color;
-            nickCtx.fillText(nick, x, y);
+            nickCtx.fillText(nick, x, labelY + labelH / 2);
         }
 
         // ══════════════════════════════════════════════════════════
