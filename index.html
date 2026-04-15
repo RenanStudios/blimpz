@@ -2108,7 +2108,8 @@
         </div>
     </div>
 
-    <script>'use strict';
+    <script>
+    'use strict';
 
         // ══════════════════════════════════════════════════════════
         // NICK
@@ -2206,9 +2207,8 @@
                         if (data.cfg && this.remotes[fromConnId]) this.remotes[fromConnId].cfg = data.cfg;
                         break;
                     case 'stats':
-                        if (this.remotes[data.pid]) {
-                            this.remotes[data.pid].finalStats = data.stats;
-                        }
+                        if (!this.remotes[data.pid]) this.remotes[data.pid] = {};
+                        this.remotes[data.pid].finalStats = data.stats;
                         if (this.role === 'host') this.broadcast(data, fromConnId);
                         break;
                     case 'world':
@@ -2234,7 +2234,6 @@
                             showWave('ONDA ' + wave);
                             const isBoss = data.isBoss;
                             notify((isBoss ? '⚠ ONDA CHEFE — ' : '') + 'Onda ' + wave + ' iniciada!', isBoss ? 'red' : 'green');
-                            timeOfDay = ((wave * .17) % 1);
                             updateHUD();
                         }
                         break;
@@ -2311,7 +2310,7 @@
                 const statsMsg = { type: 'stats', pid: this.myId, stats: myStats };
                 if (this.role === 'host') this.broadcast(statsMsg);
                 else this.sendToHost(statsMsg);
-                if (!this.remotes[this.myId]) this.remotes[this.myId] = {};
+                this.remotes[this.myId] = this.remotes[this.myId] || {};
                 this.remotes[this.myId].finalStats = myStats;
 
                 const msg = { type: 'dead', pid: this.myId };
@@ -3134,10 +3133,10 @@
         const iBoost = () => keys['Shift'];
 
         function setupTouch() {
-            const zone  = document.getElementById('joystick-zone');
-            const base  = document.getElementById('joystick-base');
-            const knob  = document.getElementById('joystick-knob');
-            const maxR  = 44;
+            const zone = document.getElementById('joystick-zone');
+            const base = document.getElementById('joystick-base');
+            const knob = document.getElementById('joystick-knob');
+            const maxR = 44;
 
             let activeTouchId = null;
             let originX = 0, originY = 0;
@@ -3148,8 +3147,8 @@
                 const clamped = Math.min(dist, maxR);
                 const angle = Math.atan2(dy, dx);
                 knob.style.left = (originX + Math.cos(angle) * clamped) + 'px';
-                knob.style.top  = (originY + Math.sin(angle) * clamped) + 'px';
-                joystick.x =  (Math.cos(angle) * clamped) / maxR;
+                knob.style.top = (originY + Math.sin(angle) * clamped) + 'px';
+                joystick.x = (Math.cos(angle) * clamped) / maxR;
                 joystick.y = -(Math.sin(angle) * clamped) / maxR;
             }
 
@@ -3157,9 +3156,9 @@
                 activeTouchId = null;
                 joystick.x = 0; joystick.y = 0;
                 knob.style.left = originX + 'px';
-                knob.style.top  = originY + 'px';
+                knob.style.top = originY + 'px';
                 base.style.left = originX + 'px';
-                base.style.top  = originY + 'px';
+                base.style.top = originY + 'px';
             }
 
             zone.addEventListener('touchstart', e => {
@@ -3171,9 +3170,9 @@
                         originX = t.clientX - rect.left;
                         originY = t.clientY - rect.top;
                         base.style.left = originX + 'px';
-                        base.style.top  = originY + 'px';
+                        base.style.top = originY + 'px';
                         knob.style.left = originX + 'px';
-                        knob.style.top  = originY + 'px';
+                        knob.style.top = originY + 'px';
                         break;
                     }
                 }
@@ -3498,7 +3497,6 @@
             const isBoss = wave % 5 === 0;
             notify((isBoss ? '⚠ ONDA CHEFE — ' : '') + 'Onda ' + wave + ' iniciada!', isBoss ? 'red' : 'green');
             score += 60 * (wave - 1);
-            timeOfDay = ((wave * .17) % 1);
             updateHUD();
             if (MP.isPlaying && MP.role === 'host') {
                 MP.broadcast({ type: 'wave', w: wave, isBoss });
@@ -3697,6 +3695,13 @@
         }
 
         function showMPGameOver() {
+            const myStats = MP.remotes[MP.myId]?.finalStats;
+
+            if (myStats) {
+                score = myStats.score;
+                kills = myStats.kills;
+                wave = myStats.wave;
+            }
             document.getElementById('mp-go-score').textContent = score;
             document.getElementById('mp-go-kills').textContent = kills;
             document.getElementById('mp-go-wave').textContent = wave;
@@ -4091,30 +4096,60 @@
         // ENVIRONMENT / SKY
         // ══════════════════════════════════════════════════════════
         function updateSkyColor(dt) {
-            timeOfDay = (timeOfDay + dt * .008) % 1;
-            let skyColor, sunColor, ambColor;
+            // O tempo avança constantemente. 
+            // Aumente o .008 para um ciclo mais rápido ou diminua para mais lento.
+            timeOfDay = (timeOfDay + dt * .004) % 1;
+
+            // Definições das cores base para cada fase do dia
+            const nightSky = new THREE.Color(0x0a1030);
+            const dawnSky = new THREE.Color(0xFF9966);
+            const daySky = new THREE.Color(0x7EC8E3);
+            const duskSky = new THREE.Color(0xFF6633);
+
+            const nightSun = new THREE.Color(0x3355aa);
+            const dawnSun = new THREE.Color(0xff8855);
+            const daySun = new THREE.Color(0xfff0d0);
+            const duskSun = new THREE.Color(0xff6622);
+
+            const nightAmb = new THREE.Color(0.25, 0.28, 0.40);
+            const dawnAmb = new THREE.Color(0.40, 0.35, 0.50);
+            const dayAmb = new THREE.Color(0.55, 0.55, 0.50);
+            const duskAmb = new THREE.Color(0.50, 0.40, 0.35);
+
+            let skyColor = new THREE.Color();
+            let sunColor = new THREE.Color();
+            let ambColor = new THREE.Color();
+
+            // Interpolação suave
             if (timeOfDay < 0.25) {
-                const t = timeOfDay / .25;
-                skyColor = new THREE.Color().lerpColors(new THREE.Color(0x1a1040), new THREE.Color(0xFF9966), t);
-                sunColor = new THREE.Color(0xff8855); ambColor = new THREE.Color(.4, .35, .5);
+                const t = timeOfDay / 0.25;
+                skyColor.lerpColors(nightSky, dawnSky, t);
+                sunColor.lerpColors(nightSun, dawnSun, t);
+                ambColor.lerpColors(nightAmb, dawnAmb, t);
             } else if (timeOfDay < 0.55) {
-                const t = (timeOfDay - .25) / .3;
-                skyColor = new THREE.Color().lerpColors(new THREE.Color(0xFF9966), new THREE.Color(0x7EC8E3), t);
-                sunColor = new THREE.Color(0xfff0d0); ambColor = new THREE.Color(.55, .55, .5);
+                const t = (timeOfDay - 0.25) / 0.30;
+                skyColor.lerpColors(dawnSky, daySky, t);
+                sunColor.lerpColors(dawnSun, daySun, t);
+                ambColor.lerpColors(dawnAmb, dayAmb, t);
             } else if (timeOfDay < 0.75) {
-                const t = (timeOfDay - .55) / .2;
-                skyColor = new THREE.Color().lerpColors(new THREE.Color(0x7EC8E3), new THREE.Color(0xFF6633), t);
-                sunColor = new THREE.Color(0xff6622); ambColor = new THREE.Color(.5, .4, .35);
+                const t = (timeOfDay - 0.55) / 0.20;
+                skyColor.lerpColors(daySky, duskSky, t);
+                sunColor.lerpColors(daySun, duskSun, t);
+                ambColor.lerpColors(dayAmb, duskAmb, t);
             } else {
-                const t = (timeOfDay - .75) / .25;
-                skyColor = new THREE.Color().lerpColors(new THREE.Color(0xFF6633), new THREE.Color(0x0a1030), t);
-                sunColor = new THREE.Color(0x3355aa); ambColor = new THREE.Color(.25, .28, .4);
+                const t = (timeOfDay - 0.75) / 0.25;
+                skyColor.lerpColors(duskSky, nightSky, t);
+                sunColor.lerpColors(duskSun, nightSun, t);
+                ambColor.lerpColors(duskAmb, nightAmb, t);
             }
 
             scene.background = skyColor;
             scene.fog.color.copy(skyColor);
-            sunLight.color = sunColor;
-            scene.children.forEach(c => { if (c.isAmbientLight) c.color = ambColor; });
+            sunLight.color.copy(sunColor);
+
+            scene.children.forEach(c => {
+                if (c.isAmbientLight) c.color.copy(ambColor);
+            });
         }
 
         // ══════════════════════════════════════════════════════════
@@ -4168,12 +4203,12 @@
             updateSkyColor(dt);
 
             const isBossWave = wave % 5 === 0;
-            if ((!MP.isPlaying || MP.role === 'host') && isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
+            if ((!MP.isPlaying || (MP.role === 'host' && state !== S.GAMEOVER)) && isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
                 spawnEnemy(true); bossSpawned = true; notify('⚠ CHEFE APARECEU! Seja cuidadoso!', 'red');
             }
 
             const spawnRate = Math.min(.008 + wave * .003, .025);
-            if (!isBossWave && Math.random() < spawnRate) spawnEnemy();
+            if ((!MP.isPlaying || (MP.role === 'host' && state !== S.GAMEOVER)) && !isBossWave && Math.random() < spawnRate) spawnEnemy();
             if (Math.random() < .055) spawnCloud();
             // Spawn de revoadas de pássaros
             const flockRate = 0.003 + wave * 0.00005;
@@ -4183,7 +4218,7 @@
                 spawnPowerup(new THREE.Vector3((Math.random() - .5) * BX * 1.5, (Math.random() - .5) * BY * 1.2, pz));
             }
 
-            if ((!MP.isPlaying || MP.role === 'host') && waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
+            if ((!MP.isPlaying || (MP.role === 'host' && state !== S.GAMEOVER)) && waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
 
             const { speed } = getShipStats();
             const boostMult = iBoost() ? 1.55 : 1;
