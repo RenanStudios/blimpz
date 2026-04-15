@@ -2237,6 +2237,18 @@
                             updateHUD();
                         }
                         break;
+                    case 'gameover': {
+                        score = data.score;
+                        kills = data.kills;
+                        wave = data.wave;
+
+                        updateHUD();
+
+                        const el = document.getElementById('mp-go-score');
+                        if (el) el.textContent = score;
+
+                        break;
+                    }
                 }
             },
 
@@ -2298,13 +2310,22 @@
                     document.getElementById('mp-waiting-overlay').classList.remove('show');
                     showMPGameOver();
                 }
+                if (this.role === 'host') {
+                    const msg = {
+                        type: 'gameover',
+                        score: score,
+                        kills: kills,
+                        wave: wave
+                    };
+                    this.broadcast(msg);
+                }
             },
 
             localDie() {
                 if (this.deadSet.has('_me')) return;
                 this.deadSet.add('_me');
                 const myStats = {
-                    score, kills, wave,
+                    score: score, kills: kills, wave: wave,
                     acc: shotsFired > 0 ? Math.round(shotsHit / shotsFired * 100) : 0
                 };
                 const statsMsg = { type: 'stats', pid: this.myId, stats: myStats };
@@ -4203,12 +4224,12 @@
             updateSkyColor(dt);
 
             const isBossWave = wave % 5 === 0;
-            if ((!MP.isPlaying || (MP.role === 'host' && state !== S.GAMEOVER)) && isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
+            if ((!MP.isPlaying || MP.role === 'host') && isBossWave && !bossSpawned && enemies.length === 0) {
                 spawnEnemy(true); bossSpawned = true; notify('⚠ CHEFE APARECEU! Seja cuidadoso!', 'red');
             }
 
             const spawnRate = Math.min(.008 + wave * .003, .025);
-            if ((!MP.isPlaying || (MP.role === 'host' && state !== S.GAMEOVER)) && !isBossWave && Math.random() < spawnRate) spawnEnemy();
+            if ((!MP.isPlaying || MP.role === 'host') && !isBossWave && Math.random() < spawnRate) spawnEnemy();
             if (Math.random() < .055) spawnCloud();
             // Spawn de revoadas de pássaros
             const flockRate = 0.003 + wave * 0.00005;
