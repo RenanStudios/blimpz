@@ -2108,8 +2108,7 @@
         </div>
     </div>
 
-    <script>
-    'use strict';
+    <script>'use strict';
 
         // ══════════════════════════════════════════════════════════
         // NICK
@@ -2293,6 +2292,7 @@
             },
 
             _checkAllDead() {
+                if (state !== S.GAMEOVER) return;
                 if (!this.deadSet.has('_me')) return;
                 const rids = Object.keys(this.remotes).filter(pid => pid !== this.myId);
                 if (rids.length === 0 || rids.every(pid => this.deadSet.has(pid))) {
@@ -3134,10 +3134,10 @@
         const iBoost = () => keys['Shift'];
 
         function setupTouch() {
-            const zone = document.getElementById('joystick-zone');
-            const base = document.getElementById('joystick-base');
-            const knob = document.getElementById('joystick-knob');
-            const maxR = 44;
+            const zone  = document.getElementById('joystick-zone');
+            const base  = document.getElementById('joystick-base');
+            const knob  = document.getElementById('joystick-knob');
+            const maxR  = 44;
 
             let activeTouchId = null;
             let originX = 0, originY = 0;
@@ -3148,8 +3148,8 @@
                 const clamped = Math.min(dist, maxR);
                 const angle = Math.atan2(dy, dx);
                 knob.style.left = (originX + Math.cos(angle) * clamped) + 'px';
-                knob.style.top = (originY + Math.sin(angle) * clamped) + 'px';
-                joystick.x = (Math.cos(angle) * clamped) / maxR;
+                knob.style.top  = (originY + Math.sin(angle) * clamped) + 'px';
+                joystick.x =  (Math.cos(angle) * clamped) / maxR;
                 joystick.y = -(Math.sin(angle) * clamped) / maxR;
             }
 
@@ -3157,9 +3157,9 @@
                 activeTouchId = null;
                 joystick.x = 0; joystick.y = 0;
                 knob.style.left = originX + 'px';
-                knob.style.top = originY + 'px';
+                knob.style.top  = originY + 'px';
                 base.style.left = originX + 'px';
-                base.style.top = originY + 'px';
+                base.style.top  = originY + 'px';
             }
 
             zone.addEventListener('touchstart', e => {
@@ -3171,9 +3171,9 @@
                         originX = t.clientX - rect.left;
                         originY = t.clientY - rect.top;
                         base.style.left = originX + 'px';
-                        base.style.top = originY + 'px';
+                        base.style.top  = originY + 'px';
                         knob.style.left = originX + 'px';
-                        knob.style.top = originY + 'px';
+                        knob.style.top  = originY + 'px';
                         break;
                     }
                 }
@@ -3660,15 +3660,6 @@
             }
 
             if (MP.isPlaying) {
-                if (MP.role === 'host') {
-                    waveTimer += dt;
-                    const isBossWave = wave % 5 === 0;
-                    if (!isBossWave && Math.random() < Math.min(.008 + wave * .003, .025)) spawnEnemy();
-                    if (isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
-                        spawnEnemy(true); bossSpawned = true;
-                    }
-                    if (waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
-                }
                 updateEnemies(dt);
                 updateEBullets(dt);
             }
@@ -3681,7 +3672,7 @@
                 state = S.GAMEOVER;
                 if (MP.isPlaying) {
                     document.getElementById('mp-waiting-overlay').classList.add('show');
-                    MP._checkAllDead();  // tenta de novo agora que state === S.GAMEOVER
+                    MP._checkAllDead();
                 } else {
                     document.getElementById('go-score').textContent = score;
                     document.getElementById('go-kills').textContent = kills;
@@ -3690,7 +3681,6 @@
                     document.getElementById('gowindow').style.display = 'block';
                 }
             }
-}
         }
 
         function backToMenu() {
@@ -4156,16 +4146,6 @@
                 updateCrashing(dt);
             } else if (state === S.GAMEOVER) {
                 if (MP.isPlaying) {
-                    if (MP.role === 'host') {
-                        // host morreu mas ainda controla o mundo
-                        waveTimer += dt;
-                        const isBossWave = wave % 5 === 0;
-                        if (!isBossWave && Math.random() < Math.min(.008 + wave * .003, .025)) spawnEnemy();
-                        if (isBossWave && !bossSpawned && enemies.length === 0 && waveTimer > 3.5) {
-                            spawnEnemy(true); bossSpawned = true;
-                        }
-                        if (waveTimer > waveDuration && !(isBossWave && enemies.length > 0)) nextWave();
-                    }
                     updateEnemies(dt);
                     updateEBullets(dt);
                     updateClouds(dt, false);
