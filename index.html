@@ -3033,6 +3033,7 @@
         // SCENERY
         // ══════════════════════════════════════════════════════════
         function spawnScenery() {
+            // 1. Chão Base
             const groundGeo = new THREE.PlaneGeometry(1800, 1400, 1, 1);
             const groundMat = new THREE.MeshLambertMaterial({ color: 0x3a7a2a, flatShading: false });
             groundMesh = new THREE.Mesh(groundGeo, groundMat);
@@ -3046,64 +3047,136 @@
             scene.add(groundGroup);
             scenery.push(groundGroup);
 
-            for (let v = 0; v < 12; v++) {
-                const vg = new THREE.Group();
-                const vx = (Math.random() - 0.5) * 1400;
-                const vz = -150 - Math.random() * 700;
-                const buildCount = 3 + Math.floor(Math.random() * 5);
-                for (let b = 0; b < buildCount; b++) {
-                    const bw = 3 + Math.random() * 5;
-                    const bh = 3 + Math.random() * 8;
-                    const bd = 3 + Math.random() * 5;
-                    const wallCol = new THREE.Color().setHSL(0.08 + Math.random() * 0.05, 0.3, 0.5 + Math.random() * 0.2);
-                    const roofCol = new THREE.Color().setHSL(0.02 + Math.random() * 0.08, 0.6, 0.35 + Math.random() * 0.2);
-                    const wall = new THREE.Mesh(G.box, new THREE.MeshLambertMaterial({ color: wallCol, flatShading: true }));
-                    wall.scale.set(bw, bh, bd);
-                    const bx = (Math.random() - 0.5) * 28;
-                    const bz = (Math.random() - 0.5) * 20;
-                    wall.position.set(bx, -277 + bh * 0.5, bz);
-                    vg.add(wall);
-                    const roof = new THREE.Mesh(G.cone, new THREE.MeshLambertMaterial({ color: roofCol, flatShading: true }));
-                    roof.scale.set(bw * 0.7, bh * 0.55, bd * 0.7);
-                    roof.position.set(bx, -277 + bh + bh * 0.28, bz);
-                    vg.add(roof);
-                }
-                const road = new THREE.Mesh(G.box, new THREE.MeshLambertMaterial({ color: 0x9b8c6e, flatShading: true }));
-                road.scale.set(3, 0.3, 30); road.position.set(0, -279.8, 0); vg.add(road);
-                vg.position.set(vx, 0, vz);
-                vg.userData.scroll = true;
-                applyOutlines(vg, 1.08);
-                scene.add(vg); scenery.push(vg);
-            }
+            // Configurações de Spawn
+            const spawnZRange = { min: -150, max: -850 };
+            const spawnXRange = 1400;
+            const groundY = -277;
 
-            for (let t = 0; t < 60; t++) {
+            // Helper para criar Árvores (usado em vários biomas)
+            const createTree = (x, z, type = 'normal') => {
                 const tg = new THREE.Group();
-                const trunkH = 3 + Math.random() * 5;
+                const trunkH = type === 'forest' ? 5 + Math.random() * 8 : 3 + Math.random() * 5;
                 const trunk = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.4, 0.6, trunkH, 5),
                     new THREE.MeshLambertMaterial({ color: 0x5c3a1a, flatShading: true })
                 );
-                trunk.position.y = -277 + trunkH * 0.5;
-                const crownR = 2.5 + Math.random() * 3;
+                trunk.position.y = groundY + trunkH * 0.5;
+
+                const crownR = type === 'forest' ? 3 + Math.random() * 4 : 2.5 + Math.random() * 3;
+                const crownGeo = type === 'modern' ? G.box : new THREE.IcosahedronGeometry(crownR, 0);
                 const crown = new THREE.Mesh(
-                    new THREE.IcosahedronGeometry(crownR, 0),
+                    crownGeo,
                     new THREE.MeshLambertMaterial({
                         color: new THREE.Color().setHSL(0.28 + Math.random() * 0.07, 0.7, 0.22 + Math.random() * 0.12),
                         flatShading: true
                     })
                 );
-                crown.position.y = -277 + trunkH + crownR * 0.7;
+                crown.position.y = groundY + trunkH + (type === 'modern' ? crownR * 0.5 : crownR * 0.7);
+                if (type === 'modern') crown.scale.set(crownR, crownR, crownR);
+
                 tg.add(trunk); tg.add(crown);
-                tg.position.set(
-                    (Math.random() - 0.5) * 1400,
-                    0,
-                    -120 - Math.random() * 700
-                );
+                tg.position.set(x, 0, z);
                 tg.userData.scroll = true;
                 applyOutlines(tg, 1.1);
                 scene.add(tg); scenery.push(tg);
+            };
+
+            // 2. Gerador de Assentamentos (Cidades, Vilas, Reinos)
+            const totalSettlements = 15;
+            for (let i = 0; i < totalSettlements; i++) {
+                const type = Math.random(); // 0-0.25: Vila, 0.25-0.5: Cidade, 0.5-0.75: Reino, 0.75-1: Floresta
+                const vx = (Math.random() - 0.5) * spawnXRange;
+                const vz = spawnZRange.min - Math.random() * (Math.abs(spawnZRange.max - spawnZRange.min));
+                const group = new THREE.Group();
+
+                if (type < 0.25) {
+                    // --- VILAREJO CLÁSSICO ---
+                    const buildCount = 3 + Math.floor(Math.random() * 4);
+                    for (let b = 0; b < buildCount; b++) {
+                        const bw = 4 + Math.random() * 4;
+                        const bh = 4 + Math.random() * 6;
+                        const bd = 4 + Math.random() * 4;
+                        const bx = (Math.random() - 0.5) * 30;
+                        const bz = (Math.random() - 0.5) * 30;
+
+                        const wall = new THREE.Mesh(G.box, new THREE.MeshLambertMaterial({ color: 0xdbca9a, flatShading: true }));
+                        wall.scale.set(bw, bh, bd);
+                        wall.position.set(bx, groundY + bh * 0.5, bz);
+                        group.add(wall);
+
+                        const roof = new THREE.Mesh(G.cone, new THREE.MeshLambertMaterial({ color: 0x8b4513, flatShading: true }));
+                        roof.scale.set(bw * 0.8, bh * 0.6, bd * 0.8);
+                        roof.position.set(bx, groundY + bh + (bh * 0.3), bz);
+                        group.add(roof);
+                    }
+                }
+                else if (type < 0.5) {
+                    // --- MINI CIDADE MODERNA ---
+                    const buildCount = 5 + Math.floor(Math.random() * 5);
+                    for (let b = 0; b < buildCount; b++) {
+                        const bw = 5 + Math.random() * 3;
+                        const bh = 15 + Math.random() * 25; // Prédios altos
+                        const bd = 5 + Math.random() * 3;
+                        const bx = (Math.random() - 0.5) * 40;
+                        const bz = (Math.random() - 0.5) * 40;
+
+                        const building = new THREE.Mesh(G.box, new THREE.MeshLambertMaterial({
+                            color: new THREE.Color().setHSL(0.6, 0.1, 0.4 + Math.random() * 0.3),
+                            flatShading: true
+                        }));
+                        building.scale.set(bw, bh, bd);
+                        building.position.set(bx, groundY + bh * 0.5, bz);
+                        group.add(building);
+
+                        // Janelas decorativas simples (listras)
+                        const windows = new THREE.Mesh(G.box, new THREE.MeshLambertMaterial({ color: 0xffeeaa }));
+                        windows.scale.set(bw + 0.2, bh * 0.8, bd * 0.8);
+                        windows.position.set(bx, groundY + bh * 0.5, bz);
+                        group.add(windows);
+                    }
+                }
+                else if (type < 0.75) {
+                    // --- REINO / CASTELO ---
+                    const wallColor = 0x888888;
+                    // Torres
+                    for (let t = 0; t < 4; t++) {
+                        const tx = (t < 2 ? -1 : 1) * 10;
+                        const tz = (t % 2 === 0 ? -1 : 1) * 10;
+                        const tower = new THREE.Mesh(G.box, new THREE.MeshLambertMaterial({ color: wallColor }));
+                        tower.scale.set(5, 15, 5);
+                        tower.position.set(tx, groundY + 7.5, tz);
+                        group.add(tower);
+                        const tRoof = new THREE.Mesh(G.cone, new THREE.MeshLambertMaterial({ color: 0x333333 }));
+                        tRoof.scale.set(4, 5, 4);
+                        tRoof.position.set(tx, groundY + 17, tz);
+                        group.add(tRoof);
+                    }
+                    // Muralhas
+                    const keep = new THREE.Mesh(G.box, new THREE.MeshLambertMaterial({ color: wallColor }));
+                    keep.scale.set(12, 10, 12);
+                    keep.position.set(0, groundY + 5, 0);
+                    group.add(keep);
+                }
+                else {
+                    // --- FLORESTA DENSA ---
+                    for (let f = 0; f < 8; f++) {
+                        createTree(vx + (Math.random() - 0.5) * 40, vz + (Math.random() - 0.5) * 40, 'forest');
+                    }
+                }
+
+                group.position.set(vx, 0, vz);
+                group.userData.scroll = true;
+                applyOutlines(group, 1.05);
+                scene.add(group);
+                scenery.push(group);
             }
 
+            // 3. Árvores Espalhadas (Preenchimento)
+            for (let t = 0; t < 40; t++) {
+                createTree((Math.random() - 0.5) * 1400, -120 - Math.random() * 700);
+            }
+
+            // 4. Balões de Ar Quente (Background)
             for (let i = 0; i < 5; i++) {
                 const bg = new THREE.Group();
                 const env = new THREE.Mesh(G.sphere, mat(new THREE.Color().setHSL(Math.random(), 0.8, 0.55)));
