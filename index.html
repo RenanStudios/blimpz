@@ -3197,6 +3197,84 @@
             const sc = isBoss ? 2.0 : 1;
             const c = cfg.colors;
 
+            // --- VARIAÇÕES DE CHEFÕES ---
+            if (isBoss && cfg.bossType) {
+                if (cfg.bossType === 'helicopter') {
+                    const body = new THREE.Mesh(G.box, mat(c.env)); body.scale.set(3 * sc, 3.5 * sc, 5 * sc); g.add(body);
+                    const cockpit = new THREE.Mesh(G.oct, mat(0x112233)); cockpit.scale.set(2.5 * sc, 2.5 * sc, 2.5 * sc); cockpit.position.set(0, 0, -3.5 * sc); g.add(cockpit);
+                    const tail = new THREE.Mesh(G.box, mat(c.env)); tail.scale.set(0.8 * sc, 1 * sc, 6 * sc); tail.position.set(0, 0.5 * sc, 5.5 * sc); g.add(tail);
+                    const tailFin = new THREE.Mesh(G.box, mat(c.stripe || c.fin)); tailFin.scale.set(0.2 * sc, 2.5 * sc, 1.5 * sc); tailFin.position.set(0, 1.5 * sc, 8 * sc); g.add(tailFin);
+
+                    const propG = new THREE.Group(); propG.name = 'prop'; propG.position.set(0, 2.2 * sc, 0);
+                    const mast = new THREE.Mesh(G.cyl, mat(0x333333)); mast.scale.set(0.4 * sc, 1 * sc, 0.4 * sc); propG.add(mast);
+                    for (let i = 0; i < 4; i++) {
+                        const blade = new THREE.Mesh(G.box, mat(c.prop)); blade.scale.set(9 * sc, 0.1 * sc, 0.6 * sc); blade.rotation.y = (Math.PI / 4) * i; propG.add(blade);
+                    }
+                    g.add(propG);
+
+                    [-1.5, 1.5].forEach(x => {
+                        const skid = new THREE.Mesh(G.cyl, mat(0x555555)); skid.scale.set(0.2 * sc, 7 * sc, 0.2 * sc); skid.rotation.x = Math.PI / 2; skid.position.set(x * sc, -2.5 * sc, 0); g.add(skid);
+                        const strut1 = new THREE.Mesh(G.cyl, mat(0x555555)); strut1.scale.set(0.15 * sc, 1.5 * sc, 0.15 * sc); strut1.position.set(x * sc, -1.8 * sc, -2 * sc); g.add(strut1);
+                        const strut2 = new THREE.Mesh(G.cyl, mat(0x555555)); strut2.scale.set(0.15 * sc, 1.5 * sc, 0.15 * sc); strut2.position.set(x * sc, -1.8 * sc, 2 * sc); g.add(strut2);
+
+                        const gun = new THREE.Mesh(G.box, mat(0x222222)); gun.scale.set(0.6 * sc, 0.6 * sc, 3.5 * sc); gun.position.set((x > 0 ? 2.5 : -2.5) * sc, -1 * sc, -2 * sc); g.add(gun);
+                    });
+
+                    g.userData = { radius: 10, health: 35, maxHealth: 35, isBoss: true };
+                    applyOutlines(g, 1.055);
+                    return g;
+                }
+                else if (cfg.bossType === 'jet') {
+                    const body = new THREE.Mesh(G.oct, mat(c.env)); body.scale.set(2 * sc, 1.5 * sc, 10 * sc); g.add(body);
+                    const nose = new THREE.Mesh(G.oct, mat(0x112233)); nose.scale.set(1.5 * sc, 1 * sc, 4 * sc); nose.position.set(0, 0, -7 * sc); g.add(nose);
+                    const wing = new THREE.Mesh(G.box, mat(c.stripe || c.env)); wing.scale.set(14 * sc, 0.2 * sc, 5 * sc); wing.position.set(0, 0, 2 * sc); g.add(wing);
+                    const tailWing = new THREE.Mesh(G.box, mat(c.stripe || c.env)); tailWing.scale.set(5 * sc, 0.2 * sc, 2 * sc); tailWing.position.set(0, 0, 8 * sc); g.add(tailWing);
+                    const fin = new THREE.Mesh(G.box, mat(c.fin)); fin.scale.set(0.2 * sc, 3 * sc, 2.5 * sc); fin.position.set(0, 1.5 * sc, 8 * sc); g.add(fin);
+
+                    [-3, 3].forEach(x => {
+                        const engine = new THREE.Mesh(G.cyl, mat(0x333333)); engine.scale.set(1 * sc, 3 * sc, 1 * sc); engine.rotation.x = Math.PI / 2; engine.position.set(x * sc, -0.5 * sc, 8 * sc); g.add(engine);
+                        const exhaust = new THREE.Mesh(G.cyl, mat(0xff4400)); exhaust.scale.set(0.8 * sc, 0.5 * sc, 0.8 * sc); exhaust.rotation.x = Math.PI / 2; exhaust.position.set(x * sc, -0.5 * sc, 9.5 * sc); g.add(exhaust);
+                    });
+
+                    // Hélice invisível apenas para evitar erro no loop de animação, caso o jogo exija a propriedade 'prop'
+                    const propG = new THREE.Group(); propG.name = 'prop'; g.add(propG);
+
+                    g.userData = { radius: 12, health: 25, maxHealth: 25, isBoss: true };
+                    applyOutlines(g, 1.055);
+                    return g;
+                }
+                else if (cfg.bossType === 'balloon') {
+                    const env = new THREE.Mesh(G.sphere, mat(c.env)); env.scale.set(6 * sc, 7.5 * sc, 6 * sc); env.position.set(0, 4 * sc, 0); g.add(env);
+                    const stripe = new THREE.Mesh(G.sphere, mat(c.stripe || c.env)); stripe.scale.set(6.2 * sc, 1.5 * sc, 6.2 * sc); stripe.position.set(0, 4 * sc, 0); g.add(stripe);
+                    const basket = new THREE.Mesh(G.box, mat(c.gon || 0x5a2d0c)); basket.scale.set(3.5 * sc, 2.5 * sc, 3.5 * sc); basket.position.set(0, -4.5 * sc, 0); g.add(basket);
+                    const burner = new THREE.Mesh(G.oct, mat(0xff4400)); burner.scale.set(1.5 * sc, 1.5 * sc, 1.5 * sc); burner.position.set(0, -2.5 * sc, 0); g.add(burner);
+
+                    [[-1.6, -1.6], [1.6, -1.6], [-1.6, 1.6], [1.6, 1.6]].forEach(([x, z]) => {
+                        const rope = new THREE.Mesh(G.cyl, mat(0xaaaaaa)); rope.scale.set(0.05 * sc, 7 * sc, 0.05 * sc);
+                        rope.position.set(x * sc, 0 * sc, z * sc);
+                        rope.rotation.x = -z * 0.05; rope.rotation.z = x * 0.05;
+                        g.add(rope);
+                        const cannon = new THREE.Mesh(G.box, mat(0x222222)); cannon.scale.set(0.4 * sc, 0.4 * sc, 1.8 * sc);
+                        cannon.position.set(x * 1.2 * sc, -4 * sc, z * 1.2 * sc);
+                        cannon.rotation.y = Math.atan2(x, z);
+                        g.add(cannon);
+                    });
+
+                    // Hélice propulsora montada na parte de trás do cesto
+                    const propG = new THREE.Group(); propG.name = 'prop'; propG.position.set(0, -4.5 * sc, 2 * sc);
+                    const hub = new THREE.Mesh(G.box, mat(0x222233)); hub.scale.set(0.4 * sc, 0.4 * sc, 0.4 * sc); propG.add(hub);
+                    for (let b = 0; b < 3; b++) {
+                        const blade = new THREE.Mesh(G.box, mat(c.prop)); blade.scale.set(1.8 * sc, 0.2 * sc, 0.1 * sc); blade.rotation.z = (Math.PI * 2 / 3) * b; propG.add(blade);
+                    }
+                    g.add(propG);
+
+                    g.userData = { radius: 9, health: 45, maxHealth: 45, isBoss: true };
+                    applyOutlines(g, 1.055);
+                    return g;
+                }
+            }
+
+            // --- DIRIGÍVEIS PADRÃO (Mantendo a lógica original) ---
             let envelopeGeo;
             if (cfg.shape === 'fat') { envelopeGeo = new THREE.Mesh(G.sphere, mat(c.env)); envelopeGeo.scale.set(5 * sc, 5 * sc, 8 * sc); }
             else if (cfg.shape === 'sleek') { envelopeGeo = new THREE.Mesh(G.sphere, mat(c.env)); envelopeGeo.scale.set(3.2 * sc, 3.2 * sc, 10 * sc); }
@@ -4024,9 +4102,56 @@
         function enemyShoot(en) {
             if (MP.isPlaying && MP.role !== 'host') return;
             const isBoss = en.userData.isBoss;
-            const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, 2.8), new THREE.MeshBasicMaterial({ color: isBoss ? 0xff0000 : 0xff4444 }));
+            const bossType = en.userData.bossType;
+
+            // Tiro normal
+            const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, 2.8),
+                new THREE.MeshBasicMaterial({ color: isBoss ? 0xff0000 : 0xff4444 }));
             m.position.copy(en.position); m.position.z += 9; scene.add(m);
-            eBullets.push({ bid: ++_bidCounter, mesh: m, speed: isBoss ? 70 : 50, dmg: isBoss ? 12 : 7 }); sfxEShoot();
+            eBullets.push({ bid: ++_bidCounter, mesh: m, speed: isBoss ? 70 : 50, dmg: isBoss ? 12 : 7 });
+            sfxEShoot();
+
+            if (!isBoss) return;
+
+            // Ataques especiais por tipo de boss (cooldown separado de 4s)
+            const now = Date.now();
+            if (now - (en.userData.lastSpecial || 0) < 4000) return;
+            en.userData.lastSpecial = now;
+
+            if (bossType === 'helicopter') {
+                // Rajada em leque: 5 tiros espalhados horizontalmente
+                for (let i = -2; i <= 2; i++) {
+                    if (i === 0) continue; // o central já foi atirado acima
+                    const mb = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, 2.2),
+                        new THREE.MeshBasicMaterial({ color: 0xff6600 }));
+                    mb.position.copy(en.position); mb.position.z += 9;
+                    scene.add(mb);
+                    eBullets.push({ bid: ++_bidCounter, mesh: mb, speed: 58, dmg: 8, drift: i * 8 });
+                }
+                notify('🚁 Rajada em leque!', 'red');
+
+            } else if (bossType === 'jet') {
+                // Míssil rápido único que vai direto ao jogador
+                if (!player) return;
+                const target = player.position.clone();
+                const origin = en.position.clone();
+                const dir = target.sub(origin).normalize();
+                const mm = new THREE.Mesh(new THREE.BoxGeometry(.4, .4, 3.5),
+                    new THREE.MeshBasicMaterial({ color: 0xff2200 }));
+                mm.position.copy(en.position); mm.position.z += 9;
+                scene.add(mm);
+                eBullets.push({ bid: ++_bidCounter, mesh: mm, speed: 105, dmg: 18, homing: dir.clone() });
+                notify('✈ Míssil rastreador!', 'red');
+
+            } else if (bossType === 'balloon') {
+                // Bomba de área: projétil lento que explode em cruz ao chegar perto
+                const mb = new THREE.Mesh(new THREE.SphereGeometry(.9, 5, 5),
+                    new THREE.MeshBasicMaterial({ color: 0xdd2200 }));
+                mb.position.copy(en.position); mb.position.z += 9;
+                scene.add(mb);
+                eBullets.push({ bid: ++_bidCounter, mesh: mb, speed: 30, dmg: 10, isBomb: true });
+                notify('🎈 Bomba de área!', 'red');
+            }
         }
 
         // ══════════════════════════════════════════════════════════
@@ -4051,17 +4176,30 @@
                     prop: '#888888', nose: '#550000', stripe: '#ff2200', gondola2: '#111122', trim: '#334466'
                 }
             };
-            if (isBoss) { ec.shape = 'fat'; ec.gun = 'double'; ec.fins = 'wide'; }
+            if (isBoss) {
+                ec.shape = 'fat'; ec.gun = 'double'; ec.fins = 'wide';
+                // Rotaciona o tipo de boss a cada onda de boss (waves 5,10,15,20...)
+                const bossIndex = Math.floor((wave - 1) / 5) % 3;
+                ec.bossType = ['helicopter', 'jet', 'balloon'][bossIndex];
+            }
             const e = buildShip(ec, isBoss);
             e.position.set((Math.random() - .5) * BX * 1.8, (Math.random() - .5) * BY * 1.5, -360 - Math.random() * 120);
             e.rotation.y = Math.PI;
             e.userData.eid = ++_eidCounter;
             e.userData.hue = hue;
             e.userData.lastShot = 0;
+            e.userData.lastSpecial = 0;
+            e.userData.bossType = isBoss ? ec.bossType : null;
             e.userData.shootCD = isBoss ? 900 : 2400 + Math.random() * 1600;
             e.userData.movePhase = Math.random() * Math.PI * 2;
             e.userData.strafeAmp = (Math.random() - .5) * 18;
             scene.add(e); enemies.push(e);
+            if (isBoss) {
+                const names = { helicopter: '🚁 CORONEL THUNDER', jet: '✈ COMANDANTE VIPER', balloon: '🎈 BARÃO BOMBARDEIRO' };
+                const bossName = names[ec.bossType] || '⚠ CHEFE';
+                document.getElementById('boss-name').textContent = bossName;
+                notify('⚠ ' + bossName + ' apareceu!', 'red');
+            }
         }
 
         function _spawnEnemyFromSnap(eid, x, y, z, hp, boss, hue, movePhase, strafeAmp, shootCD) {
@@ -4566,9 +4704,29 @@
                 const b = eBullets[i];
                 if (!MP.isPlaying || MP.role === 'host') {
                     b.mesh.position.z += b.speed * dt;
+                    // Deriva lateral (helicopter fan)
+                    if (b.drift) b.mesh.position.x += b.drift * dt;
+                    // Homing suave (jet missile) — só na primeira metade do percurso
+                    if (b.homing && b.mesh.position.z < 20) {
+                        b.mesh.position.x += b.homing.x * b.speed * dt * 0.4;
+                        b.mesh.position.y += b.homing.y * b.speed * dt * 0.4;
+                    }
                 }
                 if (b.mesh.position.z > 90) { scene.remove(b.mesh); eBullets.splice(i, 1); continue; }
-                if (player && b.mesh.position.distanceTo(player.position) < player.userData.radius + 1.5) {
+
+                if (player && b.mesh.position.distanceTo(player.position) < (b.isBomb ? 8 : 4)) {
+                    // Bomba explode em área
+                    if (b.isBomb) {
+                        createExplosion(b.mesh.position, 0xff4400, 30);
+                        sfxExplode(1.5);
+                        if (pwShield > 0) {
+                            notify('Bomba bloqueada! 🛡️', 'blue');
+                        } else if (player.position.distanceTo(b.mesh.position) < 8) {
+                            takeDamage(b.dmg || 10);
+                        }
+                        scene.remove(b.mesh); eBullets.splice(i, 1);
+                        continue;
+                    }
                     scene.remove(b.mesh); eBullets.splice(i, 1);
                     if (pwShield > 0) { notify('Tiro bloqueado! 🛡️', 'blue'); createExplosion(b.mesh.position, 0x00ccff, 6); }
                     else takeDamage(b.dmg || 8);
